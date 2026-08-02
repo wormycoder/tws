@@ -703,7 +703,7 @@ const AIM_FOV = 52;
 const AIM_SPEED_MULTIPLIER = 0.55;
 
 const gunHipPose = { position: new THREE.Vector3(0.4, -1.38, -0.1), rotY: -0.008, scale: 1 };
-const gunAimPose = { position: new THREE.Vector3(0, -1.32, 0.05), rotY: 0, scale: 1 };
+const gunAimPose = { position: new THREE.Vector3(0, -1.40, 0.05), rotY: 0, scale: 1 };
 
 function updateAimDownSights(delta) {
   const target = isAiming ? 1 : 0;
@@ -723,6 +723,30 @@ function updateAimDownSights(delta) {
 
 function currentMoveSpeed() {
   return WALK_SPEED * (1 - aimBlend * (1 - AIM_SPEED_MULTIPLIER));
+}
+
+/* ============================================================
+   CAMERA RECOIL (aim-fire only)
+   Kicks the camera up a small amount the instant you shoot, then
+   eases it back down to exactly the orientation you were already
+   at — a spring back to baseline, not a lasting drift. Uses
+   relative rotation (rotateX) so it plays nicely with
+   PointerLockControls; your next mouse move just continues from
+   wherever the camera currently is.
+   ============================================================ */
+let recoilPitch = 0; // how much of the kick is still "owed back" to baseline
+const RECOIL_KICK = 0.014;   // radians — subtle
+const RECOIL_RETURN_SPEED = 9; // higher = snaps back to baseline faster
+
+function applyCameraRecoil() {
+  camera.rotateX(RECOIL_KICK); // immediate visible pop
+  recoilPitch += RECOIL_KICK;
+}
+function updateCameraRecoil(delta) {
+  if (recoilPitch <= 0.00001) return;
+  const settle = Math.min(recoilPitch, recoilPitch * RECOIL_RETURN_SPEED * delta);
+  camera.rotateX(-settle); // ease back down toward where you were aiming
+  recoilPitch -= settle;
 }
 
 /* ============================================================
@@ -793,6 +817,7 @@ function shoot() {
   setTimeout(() => { muzzleLight.intensity = 0; }, 60);
 
   if (shootAction && !isAiming) { shootAction.reset(); shootAction.play(); }
+  if (isAiming) applyCameraRecoil();
 
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
   const targetGroups = Array.from(otherPlayers.values()).map(e => e.mesh);
@@ -965,6 +990,7 @@ function animate() {
   }
 
   updateAimDownSights(delta);
+  updateCameraRecoil(delta);
   updateMultiplayer(delta);
   renderer.render(scene, camera);
 }
