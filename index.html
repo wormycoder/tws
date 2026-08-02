@@ -297,17 +297,50 @@ camera.position.copy(randomSpawnPoint()).setY(PLAYER_HEIGHT);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 
-// simple gun model attached to camera (swap with a Blockbench .glb export)
+// --- Weapon view-model (pistol.glb) ---
+// Parenting this to `camera` is what "locks" it to a fixed spot on screen —
+// it will never need its own position set relative to the world, only
+// relative to the camera. Tweak position/rotation/scale below to taste;
+// exact values depend on how the model was modeled/pivoted in Blockbench,
+// so expect to nudge these once you can see it rendered.
 const gunGroup = new THREE.Group();
-const gunMat = new THREE.MeshStandardMaterial({ color: 0x22262e, roughness: 0.5, metalness: 0.4 });
-const gunBody = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.5), gunMat);
-gunBody.position.set(0.28, -0.28, -0.6);
-gunGroup.add(gunBody);
-const gunBarrel = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.3), gunMat);
-gunBarrel.position.set(0.28, -0.24, -0.9);
-gunGroup.add(gunBarrel);
+gunGroup.position.set(0.22, -0.22, -0.4); // screen-space offset: right, down, forward
+gunGroup.rotation.set(0, Math.PI, 0);      // flip if the model faces the wrong way
+gunGroup.scale.set(1, 1, 1);
 camera.add(gunGroup);
 scene.add(camera);
+
+let gunMixer = null;
+let shootAction = null;
+const gltfLoader = new GLTFLoader();
+gltfLoader.load("models/pistol.glb", (gltf) => {
+  const model = gltf.scene;
+  gunGroup.add(model);
+  if (gltf.animations.length > 0) {
+    gunMixer = new THREE.AnimationMixer(model);
+    shootAction = gunMixer.clipAction(gltf.animations.find(a => a.name === "shoot") || gltf.animations[0]);
+    shootAction.setLoop(THREE.LoopOnce);
+    shootAction.clampWhenFinished = true;
+  }
+}, undefined, (err) => console.error("Failed to load pistol.glb:", err));
+
+// --- Camera recoil kick (separate from the gun model's own animation) ---
+// This nudges the actual camera briefly on top of whatever the player's
+// mouse look is doing, then decays back to neutral. Because it uses
+// relative rotation (rotateX), it plays nicely with PointerLockControls —
+// the next mouse-move just picks up from wherever the camera currently is.
+let recoilPitch = 0;
+const RECOIL_KICK = 0.045;   // radians added per shot
+const RECOIL_DECAY = 6;      // higher = snaps back faster
+function applyShootRecoil() {
+  recoilPitch += RECOIL_KICK;
+}
+function updateRecoil(delta) {
+  if (recoilPitch <= 0.0001) return;
+  const settle = Math.min(recoilPitch, recoilPitch * RECOIL_DECAY * delta);
+  camera.rotateX(settle);   // flip sign here if the kick looks inverted
+  recoilPitch -= settle;
+}
 
 const muzzleLight = new THREE.PointLight(0xffcc66, 0, 6);
 muzzleLight.position.set(0.28, -0.24, -1.1);
@@ -333,17 +366,42 @@ const WALK_SPEED = 7;
 /* ============================================================
    OTHER PLAYERS (remote, rendered + used as shoot targets)
    ============================================================ */
-const otherPlayers = new Map(); // id -> { mesh, targetPos, targetRotY, name, kills, deaths }
+const otherPlayers = new Map(); // id -> { mesh, mixer, walkAction, targetPos, targetRotY, lastPos, name, kills, deaths }
 const latestPlayerStates = new Map(); // id -> raw db state, for name/kill lookups
-const otherPlayerMat = new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 });
+let playerModelTemplate = null;
+let playerWalkClip = null;
+const playerGltfLoader = new GLTFLoader();
+playerGltfLoader.load("models/player.glb", (gltf) => {
+  playerModelTemplate = gltf.scene;
+  playerWalkClip = gltf.animations.find(a => a.name === "walking") || gltf.animations[0] || null;
+});
 
 function createOtherPlayerMesh() {
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 4, 8), otherPlayerMat);
-  body.position.y = 0.95;
-  body.castShadow = true;
-  group.add(body);
-  return group;
+  let mixer = null, walkAction = null;
+  if (playerModelTemplate) {
+    // Non-skinned Blockbench rigs (bone hierarchy via parented nodes, no
+    // <skin>) clone safely with a plain deep clone — no SkeletonUtils needed.
+    const model = playerModelTemplate.clone(true);
+    group.add(model);
+    if (playerWalkClip) {
+      mixer = new THREE.AnimationMixer(model);
+      walkAction = mixer.clipAction(playerWalkClip);
+      walkAction.play();
+      walkAction.paused = true; // starts idle; unpaused when they're moving
+    }
+  } else {
+    // fallback box in case the model hasn't finished loading yet when a
+    // remote player first appears
+    const body = new THREE.Mesh(
+      new THREE.CapsuleGeometry(0.4, 1.1, 4, 8),
+      new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 })
+    );
+    body.position.y = 0.95;
+    body.castShadow = true;
+    group.add(body);
+  }
+  return { mesh: group, mixer, walkAction };
 }
 
 let mpJoined = false;
@@ -369,10 +427,15 @@ onValue(roomPlayersRef, (snapshot) => {
     seenIds.add(id);
     let entry = otherPlayers.get(id);
     if (!entry) {
-      const mesh = createOtherPlayerMesh();
-      scene.add(mesh);
-      entry = { mesh, targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0 };
-      mesh.position.copy(entry.targetPos);
+      const built = createOtherPlayerMesh();
+      built.mesh.userData.playerId = id;
+      scene.add(built.mesh);
+      entry = {
+        mesh: built.mesh, mixer: built.mixer, walkAction: built.walkAction,
+        targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0,
+        lastPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0),
+      };
+      entry.mesh.position.copy(entry.targetPos);
       otherPlayers.set(id, entry);
     }
     entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
@@ -399,7 +462,17 @@ function updateMultiplayer(delta) {
   for (const entry of otherPlayers.values()) {
     entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
     entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
+
+    if (entry.walkAction) {
+      const movedDist = entry.mesh.position.distanceTo(entry.lastPos);
+      entry.walkAction.paused = movedDist < 0.005; // idle if barely moving
+      entry.lastPos.copy(entry.mesh.position);
+    }
+    if (entry.mixer) entry.mixer.update(delta);
   }
+
+  if (gunMixer) gunMixer.update(delta);
+  updateRecoil(delta);
 
   if (!mpJoined || !player.alive) return;
   lastNetUpdate += delta;
@@ -604,17 +677,18 @@ function shoot() {
   muzzleLight.intensity = 3.5;
   setTimeout(() => { muzzleLight.intensity = 0; }, 60);
 
+  if (shootAction) { shootAction.reset(); shootAction.play(); }
+  applyShootRecoil();
+
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const targetMeshes = [];
-  const meshToId = new Map();
-  for (const [id, entry] of otherPlayers.entries()) {
-    targetMeshes.push(entry.mesh.children[0]); // hit the capsule body
-    meshToId.set(entry.mesh.children[0], id);
-  }
-  const hits = raycaster.intersectObjects(targetMeshes, false);
+  const targetGroups = Array.from(otherPlayers.values()).map(e => e.mesh);
+  const hits = raycaster.intersectObjects(targetGroups, true); // recursive: rig has nested body-part meshes
 
   if (hits.length > 0) {
-    const targetId = meshToId.get(hits[0].object);
+    // walk up from whatever body part was hit to the tagged root group
+    let obj = hits[0].object;
+    while (obj && obj.userData.playerId === undefined) obj = obj.parent;
+    const targetId = obj ? obj.userData.playerId : null;
     if (targetId) {
       // Report the hit; the target's own client applies the damage.
       push(ref(db, `rooms/${ROOM_ID}/players/${targetId}/incomingHits`), {
