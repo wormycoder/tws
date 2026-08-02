@@ -300,12 +300,10 @@ const controls = new PointerLockControls(camera, renderer.domElement);
 // --- Weapon view-model (pistol.glb) ---
 // Parenting this to `camera` is what "locks" it to a fixed spot on screen —
 // it will never need its own position set relative to the world, only
-// relative to the camera. Tweak position/rotation/scale below to taste;
-// exact values depend on how the model was modeled/pivoted in Blockbench,
-// so expect to nudge these once you can see it rendered.
+// relative to the camera.
 const gunGroup = new THREE.Group();
-gunGroup.position.set(0.22, -0.22, -0.4); // screen-space offset: right, down, forward
-gunGroup.rotation.set(0, Math.PI, 0);      // flip if the model faces the wrong way
+gunGroup.position.set(0.22, -0.22, -0.4);
+gunGroup.rotation.set(0, Math.PI, 0);
 gunGroup.scale.set(1, 1, 1);
 camera.add(gunGroup);
 scene.add(camera);
@@ -313,34 +311,89 @@ scene.add(camera);
 let gunMixer = null;
 let shootAction = null;
 const gltfLoader = new GLTFLoader();
-gltfLoader.load("models/pistol.glb", (gltf) => {
-  const model = gltf.scene;
-  gunGroup.add(model);
-  if (gltf.animations.length > 0) {
-    gunMixer = new THREE.AnimationMixer(model);
-    shootAction = gunMixer.clipAction(gltf.animations.find(a => a.name === "shoot") || gltf.animations[0]);
-    shootAction.setLoop(THREE.LoopOnce);
-    shootAction.clampWhenFinished = true;
+gltfLoader.load(
+  "models/pistol.glb",
+  (gltf) => {
+    const model = gltf.scene;
+    gunGroup.add(model);
+    if (gltf.animations.length > 0) {
+      gunMixer = new THREE.AnimationMixer(model);
+      shootAction = gunMixer.clipAction(gltf.animations.find(a => a.name === "shoot") || gltf.animations[0]);
+      shootAction.setLoop(THREE.LoopOnce);
+      shootAction.clampWhenFinished = true;
+    }
+    // Diagnostics: confirms the file loaded and tells you its real size,
+    // so you can tell "wrong position" apart from "didn't load at all".
+    const box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    console.log("[pistol.glb] loaded OK. Bounding box size:", size, "— if this looks huge/tiny, that's a scale issue, not a load failure.");
+  },
+  undefined,
+  (err) => {
+    console.error("[pistol.glb] FAILED TO LOAD:", err);
+    showLoadError("models/pistol.glb");
   }
-}, undefined, (err) => console.error("Failed to load pistol.glb:", err));
+);
 
-// --- Camera recoil kick (separate from the gun model's own animation) ---
-// This nudges the actual camera briefly on top of whatever the player's
-// mouse look is doing, then decays back to neutral. Because it uses
-// relative rotation (rotateX), it plays nicely with PointerLockControls —
-// the next mouse-move just picks up from wherever the camera currently is.
-let recoilPitch = 0;
-const RECOIL_KICK = 0.045;   // radians added per shot
-const RECOIL_DECAY = 6;      // higher = snaps back faster
-function applyShootRecoil() {
-  recoilPitch += RECOIL_KICK;
+function showLoadError(path) {
+  const el = document.createElement("div");
+  el.style.cssText = "position:fixed;top:10px;left:10px;background:#a00;color:#fff;padding:10px 14px;font:13px monospace;z-index:999;border-radius:4px;max-width:400px;";
+  el.textContent = `⚠ Failed to load ${path} — check that the file exists at that exact path/case in your repo (open browser console for the real error).`;
+  document.body.appendChild(el);
 }
-function updateRecoil(delta) {
-  if (recoilPitch <= 0.0001) return;
-  const settle = Math.min(recoilPitch, recoilPitch * RECOIL_DECAY * delta);
-  camera.rotateX(settle);   // flip sign here if the kick looks inverted
-  recoilPitch -= settle;
+
+/* ============================================================
+   GUN POSITION DEBUG TOOL
+   Press ` (backtick) to toggle. While on:
+     I/K = forward/back   J/L = left/right   U/O = up/down
+     , / . = rotate Y      [ / ] = scale down/up
+   Current values print to the on-screen panel AND the console
+   every time you adjust something — read them off there once it
+   looks right, then tell me the numbers (or edit gunGroup's
+   position/rotation/scale near the top of the script yourself).
+   ============================================================ */
+let gunDebug = false;
+const gunDebugEl = document.createElement("div");
+gunDebugEl.style.cssText = "position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.75);color:#6f6;padding:10px 14px;font:12px monospace;z-index:999;border-radius:4px;white-space:pre;display:none;";
+document.body.appendChild(gunDebugEl);
+
+function refreshGunDebugPanel() {
+  const p = gunGroup.position, r = gunGroup.rotation, s = gunGroup.scale;
+  const text =
+`GUN DEBUG (\` to hide)
+pos: ${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}
+rotY: ${r.y.toFixed(3)}
+scale: ${s.x.toFixed(3)}
+I/K fwd-back  J/L left-right  U/O up-down
+, / . rotate   [ / ] scale`;
+  gunDebugEl.textContent = text;
+  console.log(text.replace(/\n/g, " | "));
 }
+
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Backquote") {
+    gunDebug = !gunDebug;
+    gunDebugEl.style.display = gunDebug ? "block" : "none";
+    if (gunDebug) refreshGunDebugPanel();
+    return;
+  }
+  if (!gunDebug) return;
+  const STEP = 0.02, ROT_STEP = 0.05, SCALE_STEP = 0.05;
+  switch (e.code) {
+    case "KeyI": gunGroup.position.z -= STEP; break;
+    case "KeyK": gunGroup.position.z += STEP; break;
+    case "KeyJ": gunGroup.position.x -= STEP; break;
+    case "KeyL": gunGroup.position.x += STEP; break;
+    case "KeyU": gunGroup.position.y += STEP; break;
+    case "KeyO": gunGroup.position.y -= STEP; break;
+    case "Comma": gunGroup.rotation.y -= ROT_STEP; break;
+    case "Period": gunGroup.rotation.y += ROT_STEP; break;
+    case "BracketLeft": gunGroup.scale.multiplyScalar(1 - SCALE_STEP); break;
+    case "BracketRight": gunGroup.scale.multiplyScalar(1 + SCALE_STEP); break;
+    default: return;
+  }
+  refreshGunDebugPanel();
+});
 
 const muzzleLight = new THREE.PointLight(0xffcc66, 0, 6);
 muzzleLight.position.set(0.28, -0.24, -1.1);
@@ -371,10 +424,19 @@ const latestPlayerStates = new Map(); // id -> raw db state, for name/kill looku
 let playerModelTemplate = null;
 let playerWalkClip = null;
 const playerGltfLoader = new GLTFLoader();
-playerGltfLoader.load("models/player.glb", (gltf) => {
-  playerModelTemplate = gltf.scene;
-  playerWalkClip = gltf.animations.find(a => a.name === "walking") || gltf.animations[0] || null;
-});
+playerGltfLoader.load(
+  "models/player.glb",
+  (gltf) => {
+    playerModelTemplate = gltf.scene;
+    playerWalkClip = gltf.animations.find(a => a.name === "walking") || gltf.animations[0] || null;
+    console.log("[player.glb] loaded OK.", gltf.animations.length, "animation(s) found.");
+  },
+  undefined,
+  (err) => {
+    console.error("[player.glb] FAILED TO LOAD:", err);
+    showLoadError("models/player.glb");
+  }
+);
 
 function createOtherPlayerMesh() {
   const group = new THREE.Group();
@@ -472,7 +534,6 @@ function updateMultiplayer(delta) {
   }
 
   if (gunMixer) gunMixer.update(delta);
-  updateRecoil(delta);
 
   if (!mpJoined || !player.alive) return;
   lastNetUpdate += delta;
@@ -678,7 +739,6 @@ function shoot() {
   setTimeout(() => { muzzleLight.intensity = 0; }, 60);
 
   if (shootAction) { shootAction.reset(); shootAction.play(); }
-  applyShootRecoil();
 
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
   const targetGroups = Array.from(otherPlayers.values()).map(e => e.mesh);
