@@ -792,7 +792,7 @@ function shoot() {
   muzzleLight.intensity = 3.5;
   setTimeout(() => { muzzleLight.intensity = 0; }, 60);
 
-  if (shootAction) { shootAction.reset(); shootAction.play(); }
+  if (shootAction && !isAiming) { shootAction.reset(); shootAction.play(); }
 
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
   const targetGroups = Array.from(otherPlayers.values()).map(e => e.mesh);
