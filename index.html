@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Arena Shooter Prototype</title>
+<title>Arena PvP Shooter</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,6 +31,7 @@
   #hitmarker::before { left: 50%; top: 0; width: 3px; height: 100%; transform: translateX(-50%); }
   #hitmarker::after { top: 50%; left: 0; height: 3px; width: 100%; transform: translateY(-50%); }
   #hitmarker.show { animation: hitflash 0.15s ease-out; }
+  #hitmarker.kill::before, #hitmarker.kill::after { background: #ffcc33; }
   @keyframes hitflash { 0% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1.4); } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(45deg) scale(1); } }
 
   #damageFlash {
@@ -47,25 +48,59 @@
   #ammoText { font-size: 22px; font-weight: bold; text-shadow: 0 1px 3px #000; letter-spacing: 1px; }
   #reloadText { font-size: 13px; color: #ffcc55; margin-top: 2px; visibility: hidden; text-shadow: 0 1px 2px #000; }
 
-  #scoreBox { position: absolute; top: 20px; right: 20px; text-align: right; text-shadow: 0 1px 3px #000; }
-  #scoreVal { font-size: 30px; font-weight: bold; }
-  #scoreLabel { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
+  #kdBox { position: absolute; top: 20px; right: 20px; text-align: right; text-shadow: 0 1px 3px #000; }
+  #killsVal { font-size: 30px; font-weight: bold; }
+  #kdLabel { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
+  #deathsVal { font-size: 14px; opacity: 0.75; margin-top: 2px; }
 
-  #waveBox { position: absolute; top: 20px; left: 20px; text-shadow: 0 1px 3px #000; }
-  #waveVal { font-size: 20px; font-weight: bold; }
-  #waveLabel { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
+  #killFeed {
+    position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    display: flex; flex-direction: column; gap: 4px; align-items: center;
+  }
+  .killFeedEntry {
+    background: rgba(0,0,0,0.55); padding: 5px 12px; border-radius: 3px;
+    font-size: 13px; white-space: nowrap; opacity: 0; transform: translateY(-8px);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  .killFeedEntry.show { opacity: 1; transform: translateY(0); }
+  .killFeedEntry .fragger { color: #6cf; font-weight: 600; }
+  .killFeedEntry .fragged { color: #ff8080; font-weight: 600; }
+
+  #scoreboard {
+    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(10,12,18,0.9); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 14px 18px; min-width: 260px;
+    visibility: hidden; opacity: 0; transition: opacity 0.15s ease;
+  }
+  #scoreboard.show { visibility: visible; opacity: 1; }
+  #scoreboard h3 { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.7; margin-bottom: 10px; text-align: center; }
+  #scoreboard table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  #scoreboard th { text-align: left; opacity: 0.6; font-weight: normal; font-size: 11px; text-transform: uppercase; padding-bottom: 6px; }
+  #scoreboard td { padding: 3px 0; }
+  #scoreboard td.num { text-align: right; }
+  #scoreboard tr.me { color: #6cf; }
 
   /* --- Overlays --- */
   #overlay {
     position: fixed; inset: 0; background: rgba(10,10,15,0.9); color: #fff;
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    text-align: center; z-index: 20; cursor: pointer;
+    text-align: center; z-index: 20;
   }
   #overlay h1 { font-size: 42px; margin-bottom: 10px; letter-spacing: 2px; }
   #overlay p { font-size: 15px; opacity: 0.85; margin: 4px 0; max-width: 480px; line-height: 1.5; }
   #overlay .key { display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); border-radius: 4px; padding: 1px 7px; margin: 0 2px; font-family: monospace; }
-  #overlay .prompt { margin-top: 26px; font-size: 18px; color: #6cf; animation: pulse 1.6s infinite; }
-  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+  #nameInput {
+    margin-top: 22px; font-size: 16px; padding: 8px 14px; border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.35); background: rgba(255,255,255,0.08); color: #fff;
+    text-align: center; width: 220px;
+  }
+  #nameInput:focus { outline: 2px solid #6cf; }
+  #startBtn {
+    margin-top: 16px; font-size: 18px; padding: 10px 28px; border-radius: 4px;
+    border: none; background: #6cf; color: #04111a; font-weight: bold; cursor: pointer;
+    letter-spacing: 1px;
+  }
+  #startBtn:hover { background: #8dd8ff; }
   #overlay.hidden { display: none; }
 </style>
 </head>
@@ -83,23 +118,30 @@
     <div id="reloadText">RELOADING...</div>
   </div>
 
-  <div id="scoreBox">
-    <div id="scoreVal">0</div>
-    <div id="scoreLabel">Score</div>
+  <div id="kdBox">
+    <div id="killsVal">0</div>
+    <div id="kdLabel">Kills</div>
+    <div id="deathsVal">0 deaths</div>
   </div>
 
-  <div id="waveBox">
-    <div id="waveVal">Wave 1</div>
-    <div id="waveLabel">Enemies remaining: 5</div>
+  <div id="killFeed"></div>
+
+  <div id="scoreboard">
+    <h3>Scoreboard</h3>
+    <table>
+      <thead><tr><th>Player</th><th class="num">K</th><th class="num">D</th></tr></thead>
+      <tbody id="scoreboardBody"></tbody>
+    </table>
   </div>
 </div>
 
 <div id="overlay">
-  <h1>ARENA SHOOTER</h1>
+  <h1>ARENA PVP</h1>
   <p><span class="key">W A S D</span> move &nbsp; <span class="key">MOUSE</span> look &nbsp; <span class="key">SPACE</span> jump</p>
-  <p><span class="key">LEFT CLICK</span> shoot &nbsp; <span class="key">R</span> reload</p>
-  <p>Survive the waves. Don't let enemies reach you.</p>
-  <div class="prompt" id="startPrompt">CLICK TO START</div>
+  <p><span class="key">LEFT CLICK</span> shoot &nbsp; <span class="key">R</span> reload &nbsp; <span class="key">TAB</span> scoreboard</p>
+  <p>Everyone in this room is an opponent. Last hits win.</p>
+  <input id="nameInput" type="text" maxlength="16" placeholder="Your name">
+  <button id="startBtn">START</button>
 </div>
 
 <script type="importmap">
@@ -121,14 +163,12 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { initializeApp } from "firebase/app";
 import {
-  getDatabase, ref, set, update, onValue, onDisconnect, serverTimestamp
+  getDatabase, ref, set, update, remove, push, onValue, onChildAdded,
+  onDisconnect, serverTimestamp, increment, query, limitToLast
 } from "firebase/database";
 
 /* ============================================================
-   MULTIPLAYER (Firebase Realtime Database)
-   This syncs player positions/rotations/health so people in the
-   same room can see each other move around. Shooting between
-   players isn't wired up yet — see README for why and next steps.
+   FIREBASE SETUP
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyCAzhR53W2LRZzGpPj2I5qF65Pb1SzdpRs",
@@ -146,77 +186,11 @@ const ROOM_ID = "arena1"; // change this to run separate matches
 const playerId = "p_" + Math.random().toString(36).slice(2, 10);
 const playerRef = ref(db, `rooms/${ROOM_ID}/players/${playerId}`);
 const roomPlayersRef = ref(db, `rooms/${ROOM_ID}/players`);
+const myIncomingHitsRef = ref(db, `rooms/${ROOM_ID}/players/${playerId}/incomingHits`);
+const killfeedRef = ref(db, `rooms/${ROOM_ID}/killfeed`);
+const killfeedQuery = query(killfeedRef, limitToLast(5));
 
-const otherPlayers = new Map(); // id -> { mesh, targetPos, targetRotY }
-const otherPlayerMat = new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 });
-
-function createOtherPlayerMesh() {
-  const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 4, 8), otherPlayerMat);
-  body.position.y = 0.95;
-  body.castShadow = true;
-  group.add(body);
-  return group;
-}
-
-let mpJoined = false;
-function joinMultiplayer() {
-  if (mpJoined) return;
-  mpJoined = true;
-  onDisconnect(playerRef).remove();
-  set(playerRef, {
-    x: camera.position.x, y: camera.position.y, z: camera.position.z,
-    rotY: camera.rotation.y, health: player.health, joinedAt: serverTimestamp(),
-  });
-}
-
-onValue(roomPlayersRef, (snapshot) => {
-  const data = snapshot.val() || {};
-  const seenIds = new Set();
-
-  for (const [id, state] of Object.entries(data)) {
-    if (id === playerId) continue;
-    seenIds.add(id);
-    let entry = otherPlayers.get(id);
-    if (!entry) {
-      const mesh = createOtherPlayerMesh();
-      scene.add(mesh);
-      entry = { mesh, targetPos: new THREE.Vector3(), targetRotY: 0 };
-      otherPlayers.set(id, entry);
-    }
-    entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
-    entry.targetRotY = state.rotY ?? 0;
-  }
-
-  // remove players who left
-  for (const id of Array.from(otherPlayers.keys())) {
-    if (!seenIds.has(id)) {
-      const entry = otherPlayers.get(id);
-      scene.remove(entry.mesh);
-      otherPlayers.delete(id);
-    }
-  }
-});
-
-let lastNetUpdate = 0;
-const NET_UPDATE_INTERVAL = 0.1; // seconds, ~10Hz
-function updateMultiplayer(delta) {
-  // smoothly interpolate other players toward their latest known position
-  for (const entry of otherPlayers.values()) {
-    entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
-    entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
-  }
-
-  if (!mpJoined || !player.alive) return;
-  lastNetUpdate += delta;
-  if (lastNetUpdate >= NET_UPDATE_INTERVAL) {
-    lastNetUpdate = 0;
-    update(playerRef, {
-      x: camera.position.x, y: camera.position.y, z: camera.position.z,
-      rotY: camera.rotation.y, health: player.health,
-    });
-  }
-}
+let myName = "Player" + Math.floor(1000 + Math.random() * 9000);
 
 /* ============================================================
    SCENE / RENDERER / CAMERA
@@ -267,7 +241,6 @@ ground.rotation.x = -Math.PI / 2;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// simple grid for visual reference
 const grid = new THREE.GridHelper(ARENA_SIZE, 40, 0x444a58, 0x1c1f28);
 grid.position.y = 0.01;
 scene.add(grid);
@@ -290,7 +263,7 @@ makeWall(1, wallHeight, ARENA_SIZE, half, wallHeight / 2, 0);
 
 // Obstacles: used for both rendering AND collision (see `obstacles` array)
 const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x556075, roughness: 0.8 });
-const obstacles = []; // { mesh, halfW, halfD }
+const obstacles = []; // { x, z, halfW, halfD }
 function addObstacle(w, h, d, x, z) {
   const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), obstacleMat);
   box.position.set(x, h / 2, z);
@@ -305,12 +278,22 @@ addObstacle(2, 2.5, 6, 0, -12);
 addObstacle(4, 2, 2, -12, 8);
 addObstacle(2, 4, 2, 12, -14);
 
+// Spawn points, spread around the arena away from the center firefight
+const SPAWN_POINTS = [
+  [14, 14], [-14, 14], [14, -14], [-14, -14],
+  [0, 16], [0, -16], [16, 0], [-16, 0],
+];
+function randomSpawnPoint() {
+  const [x, z] = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
+  return new THREE.Vector3(x, 0, z);
+}
+
 /* ============================================================
-   PLAYER
+   PLAYER (local)
    ============================================================ */
 const PLAYER_HEIGHT = 1.7;
 const PLAYER_RADIUS = 0.4;
-camera.position.set(0, PLAYER_HEIGHT, 10);
+camera.position.copy(randomSpawnPoint()).setY(PLAYER_HEIGHT);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 
@@ -326,7 +309,6 @@ gunGroup.add(gunBarrel);
 camera.add(gunGroup);
 scene.add(camera);
 
-// muzzle flash light
 const muzzleLight = new THREE.PointLight(0xffcc66, 0, 6);
 muzzleLight.position.set(0.28, -0.24, -1.1);
 camera.add(muzzleLight);
@@ -337,6 +319,8 @@ const player = {
   health: 100,
   maxHealth: 100,
   alive: true,
+  kills: 0,
+  deaths: 0,
 };
 
 const move = { forward: false, back: false, left: false, right: false };
@@ -347,22 +331,168 @@ const JUMP_SPEED = 8;
 const WALK_SPEED = 7;
 
 /* ============================================================
+   OTHER PLAYERS (remote, rendered + used as shoot targets)
+   ============================================================ */
+const otherPlayers = new Map(); // id -> { mesh, targetPos, targetRotY, name, kills, deaths }
+const latestPlayerStates = new Map(); // id -> raw db state, for name/kill lookups
+const otherPlayerMat = new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 });
+
+function createOtherPlayerMesh() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 4, 8), otherPlayerMat);
+  body.position.y = 0.95;
+  body.castShadow = true;
+  group.add(body);
+  return group;
+}
+
+let mpJoined = false;
+function joinMultiplayer() {
+  onDisconnect(playerRef).remove();
+  set(playerRef, {
+    x: camera.position.x, y: camera.position.y, z: camera.position.z,
+    rotY: camera.rotation.y, health: player.health,
+    name: myName, kills: player.kills, deaths: player.deaths,
+    joinedAt: serverTimestamp(),
+  });
+  mpJoined = true;
+}
+
+onValue(roomPlayersRef, (snapshot) => {
+  const data = snapshot.val() || {};
+  const seenIds = new Set();
+  latestPlayerStates.clear();
+
+  for (const [id, state] of Object.entries(data)) {
+    latestPlayerStates.set(id, state);
+    if (id === playerId) continue;
+    seenIds.add(id);
+    let entry = otherPlayers.get(id);
+    if (!entry) {
+      const mesh = createOtherPlayerMesh();
+      scene.add(mesh);
+      entry = { mesh, targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0 };
+      mesh.position.copy(entry.targetPos);
+      otherPlayers.set(id, entry);
+    }
+    entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
+    entry.targetRotY = state.rotY ?? 0;
+    entry.name = state.name ?? "Player";
+    entry.kills = state.kills ?? 0;
+    entry.deaths = state.deaths ?? 0;
+  }
+
+  for (const id of Array.from(otherPlayers.keys())) {
+    if (!seenIds.has(id)) {
+      const entry = otherPlayers.get(id);
+      scene.remove(entry.mesh);
+      otherPlayers.delete(id);
+    }
+  }
+
+  updateScoreboardUI();
+});
+
+let lastNetUpdate = 0;
+const NET_UPDATE_INTERVAL = 0.1; // seconds, ~10Hz
+function updateMultiplayer(delta) {
+  for (const entry of otherPlayers.values()) {
+    entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
+    entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
+  }
+
+  if (!mpJoined || !player.alive) return;
+  lastNetUpdate += delta;
+  if (lastNetUpdate >= NET_UPDATE_INTERVAL) {
+    lastNetUpdate = 0;
+    update(playerRef, {
+      x: camera.position.x, y: camera.position.y, z: camera.position.z,
+      rotY: camera.rotation.y, health: player.health,
+    });
+  }
+}
+
+/* ============================================================
+   INCOMING HITS — this client is authoritative over its OWN health.
+   Other players report hits here; we apply the damage ourselves and
+   credit the kill back to them if it's fatal. This avoids two clients
+   racing to write the same health value.
+   ============================================================ */
+onChildAdded(myIncomingHitsRef, (snapshot) => {
+  const hit = snapshot.val();
+  if (!hit || !player.alive) { remove(snapshot.ref); return; }
+
+  const shooterState = latestPlayerStates.get(hit.shooterId);
+  const shooterName = shooterState?.name || hit.shooterName || "Someone";
+
+  damagePlayer(hit.damage || 25, shooterName, hit.shooterId);
+  remove(snapshot.ref); // mark processed
+});
+
+/* ============================================================
+   KILL FEED
+   ============================================================ */
+const killFeedEl = document.getElementById("killFeed");
+onChildAdded(killfeedQuery, (snapshot) => {
+  const entry = snapshot.val();
+  if (!entry) return;
+  addKillFeedEntry(entry.fraggerName, entry.fraggedName);
+});
+
+function addKillFeedEntry(fraggerName, fraggedName) {
+  const el = document.createElement("div");
+  el.className = "killFeedEntry";
+  el.innerHTML = `<span class="fragger">${escapeHtml(fraggerName)}</span> eliminated <span class="fragged">${escapeHtml(fraggedName)}</span>`;
+  killFeedEl.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => {
+    el.classList.remove("show");
+    setTimeout(() => el.remove(), 300);
+  }, 4000);
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+/* ============================================================
+   SCOREBOARD (Tab to toggle)
+   ============================================================ */
+const scoreboardEl = document.getElementById("scoreboard");
+const scoreboardBody = document.getElementById("scoreboardBody");
+let scoreboardVisible = false;
+
+function updateScoreboardUI() {
+  const rows = [{ id: playerId, name: myName, kills: player.kills, deaths: player.deaths }];
+  for (const [id, entry] of otherPlayers.entries()) {
+    rows.push({ id, name: entry.name, kills: entry.kills, deaths: entry.deaths });
+  }
+  rows.sort((a, b) => b.kills - a.kills);
+  scoreboardBody.innerHTML = rows.map(r =>
+    `<tr class="${r.id === playerId ? "me" : ""}"><td>${escapeHtml(r.name)}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td></tr>`
+  ).join("");
+}
+
+/* ============================================================
    INPUT
    ============================================================ */
 const overlay = document.getElementById("overlay");
-const startPrompt = document.getElementById("startPrompt");
+const nameInput = document.getElementById("nameInput");
+const startBtn = document.getElementById("startBtn");
+nameInput.value = myName;
 
-renderer.domElement.addEventListener("click", () => {
+startBtn.addEventListener("click", () => {
+  const typed = nameInput.value.trim();
+  if (typed) myName = typed.slice(0, 16);
   if (!controls.isLocked) controls.lock();
 });
-
-overlay.addEventListener("click", () => {
-  if (!controls.isLocked) controls.lock();
+nameInput.addEventListener("keydown", (e) => {
+  if (e.code === "Enter") startBtn.click();
 });
 
 controls.addEventListener("lock", () => {
   overlay.classList.add("hidden");
-  joinMultiplayer();
+  if (!mpJoined) joinMultiplayer();
+  else update(playerRef, { name: myName });
 });
 controls.addEventListener("unlock", () => {
   if (player.alive) overlay.classList.remove("hidden");
@@ -382,6 +512,11 @@ document.addEventListener("keydown", (e) => {
       }
       break;
     case "KeyR": startReload(); break;
+    case "Tab":
+      e.preventDefault();
+      scoreboardVisible = true;
+      scoreboardEl.classList.add("show");
+      break;
   }
 });
 document.addEventListener("keyup", (e) => {
@@ -391,6 +526,10 @@ document.addEventListener("keyup", (e) => {
     case "KeyA": move.left = false; break;
     case "KeyD": move.right = false; break;
     case "Space": canJump = true; break;
+    case "Tab":
+      scoreboardVisible = false;
+      scoreboardEl.classList.remove("show");
+      break;
   }
 });
 
@@ -451,6 +590,8 @@ function startReload() {
   }, 1100);
 }
 
+const WEAPON_DAMAGE = 25; // 4 hits to kill at full health
+
 function shoot() {
   if (weapon.fireCooldown > 0 || weapon.reloading || !player.alive) return;
   if (weapon.mag <= 0) { sfxEmpty(); startReload(); return; }
@@ -460,139 +601,40 @@ function shoot() {
   updateAmmoUI();
   sfxShoot();
 
-  // muzzle flash
   muzzleLight.intensity = 3.5;
   setTimeout(() => { muzzleLight.intensity = 0; }, 60);
 
   raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const targets = enemies.map(e => e.mesh);
-  const hits = raycaster.intersectObjects(targets, false);
+  const targetMeshes = [];
+  const meshToId = new Map();
+  for (const [id, entry] of otherPlayers.entries()) {
+    targetMeshes.push(entry.mesh.children[0]); // hit the capsule body
+    meshToId.set(entry.mesh.children[0], id);
+  }
+  const hits = raycaster.intersectObjects(targetMeshes, false);
 
   if (hits.length > 0) {
-    const hitMesh = hits[0].object;
-    const enemy = enemies.find(e => e.mesh === hitMesh);
-    if (enemy) damageEnemy(enemy, 34);
-    hitmarkerEl.classList.remove("show");
-    void hitmarkerEl.offsetWidth; // restart animation
-    hitmarkerEl.classList.add("show");
+    const targetId = meshToId.get(hits[0].object);
+    if (targetId) {
+      // Report the hit; the target's own client applies the damage.
+      push(ref(db, `rooms/${ROOM_ID}/players/${targetId}/incomingHits`), {
+        damage: WEAPON_DAMAGE, shooterId: playerId, shooterName: myName, ts: serverTimestamp(),
+      });
+      sfxHit();
+      hitmarkerEl.classList.remove("show");
+      void hitmarkerEl.offsetWidth; // restart animation
+      hitmarkerEl.classList.add("show");
+    }
   }
 }
 
 /* ============================================================
-   ENEMIES
+   HEALTH / DEATH / RESPAWN (local player is authoritative over
+   its own health — see the incomingHits listener above)
    ============================================================ */
-const enemies = [];
-const ENEMY_SPEED = 2.6;
-const ENEMY_HEALTH = 100;
-const ENEMY_DAMAGE = 8;
-const ENEMY_ATTACK_RANGE = 1.4;
-const ENEMY_ATTACK_COOLDOWN = 1.0;
-
-const enemyMat = new THREE.MeshStandardMaterial({ color: 0xd94848, roughness: 0.6, emissive: 0x330000 });
-const enemyEyeMat = new THREE.MeshStandardMaterial({ color: 0xffee66, emissive: 0xffcc00, emissiveIntensity: 1 });
-
-// Swap-in point: replace this primitive enemy mesh with a GLTF model
-// (e.g. exported from Blockbench) loaded via GLTFLoader.
-function createEnemyMesh() {
-  const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.6, 0.6), enemyMat);
-  body.position.y = 0.8;
-  body.castShadow = true;
-  group.add(body);
-  const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.08, 8, 8), enemyEyeMat);
-  eyeL.position.set(-0.2, 1.25, -0.31);
-  const eyeR = eyeL.clone();
-  eyeR.position.x = 0.2;
-  group.add(eyeL, eyeR);
-  return group;
-}
-
-function spawnEnemy() {
-  const angle = Math.random() * Math.PI * 2;
-  const radius = 14 + Math.random() * 4;
-  const x = Math.cos(angle) * radius;
-  const z = Math.sin(angle) * radius;
-  const mesh = createEnemyMesh();
-  mesh.position.set(x, 0, z);
-  scene.add(mesh);
-  enemies.push({
-    mesh,
-    health: ENEMY_HEALTH,
-    maxHealth: ENEMY_HEALTH,
-    attackCooldown: 0,
-    alive: true,
-  });
-}
-
-function damageEnemy(enemy, amount) {
-  if (!enemy.alive) return;
-  enemy.health -= amount;
-  sfxHit();
-  flashEnemy(enemy);
-  if (enemy.health <= 0) killEnemy(enemy);
-}
-
-function flashEnemy(enemy) {
-  const body = enemy.mesh.children[0];
-  body.material = body.material.clone();
-  body.material.emissive.setHex(0xffffff);
-  setTimeout(() => { if (body.material) body.material.emissive.setHex(0x330000); }, 80);
-}
-
-function killEnemy(enemy) {
-  enemy.alive = false;
-  scene.remove(enemy.mesh);
-  const idx = enemies.indexOf(enemy);
-  if (idx !== -1) enemies.splice(idx, 1);
-  score += 10;
-  updateScoreUI();
-  sfxKill();
-  waveRemaining = Math.max(0, waveRemaining); // no-op, kept for clarity
-  checkWaveComplete();
-}
-
-/* ============================================================
-   WAVES
-   ============================================================ */
-let wave = 1;
-let waveRemaining = 0;
-let waveTotal = 0;
-const waveVal = document.getElementById("waveVal");
-const waveLabel = document.getElementById("waveLabel");
-
-function startWave() {
-  waveTotal = 4 + wave * 2;
-  waveRemaining = waveTotal;
-  waveVal.textContent = `Wave ${wave}`;
-  updateWaveUI();
-  let spawned = 0;
-  const spawnInterval = setInterval(() => {
-    if (spawned >= waveTotal || !player.alive) { clearInterval(spawnInterval); return; }
-    spawnEnemy();
-    spawned++;
-  }, 700);
-}
-
-function updateWaveUI() {
-  const aliveCount = enemies.length;
-  waveLabel.textContent = `Enemies remaining: ${aliveCount}`;
-}
-
-function checkWaveComplete() {
-  updateWaveUI();
-  if (enemies.length === 0 && player.alive) {
-    wave++;
-    setTimeout(startWave, 2500);
-  }
-}
-
-/* ============================================================
-   SCORE / HEALTH UI
-   ============================================================ */
-let score = 0;
-const scoreVal = document.getElementById("scoreVal");
-function updateScoreUI() { scoreVal.textContent = score; }
-
+let killsCount = 0; // mirrors player.kills, kept for clarity in UI updates
+const killsValEl = document.getElementById("killsVal");
+const deathsValEl = document.getElementById("deathsVal");
 const healthFill = document.getElementById("healthFill");
 const damageFlash = document.getElementById("damageFlash");
 
@@ -600,8 +642,12 @@ function updateHealthUI() {
   const pct = Math.max(0, player.health / player.maxHealth) * 100;
   healthFill.style.width = `${pct}%`;
 }
+function updateKdUI() {
+  killsValEl.textContent = player.kills;
+  deathsValEl.textContent = `${player.deaths} death${player.deaths === 1 ? "" : "s"}`;
+}
 
-function damagePlayer(amount) {
+function damagePlayer(amount, shooterName, shooterId) {
   if (!player.alive) return;
   player.health -= amount;
   sfxHurt();
@@ -610,19 +656,34 @@ function damagePlayer(amount) {
   damageFlash.classList.add("show");
   setTimeout(() => damageFlash.classList.remove("show"), 150);
   updateHealthUI();
-  if (player.health <= 0) playerDie();
+
+  if (player.health <= 0) {
+    playerDie(shooterName, shooterId);
+  } else {
+    update(playerRef, { health: player.health });
+  }
 }
 
-function playerDie() {
+function playerDie(killerName, killerId) {
   player.alive = false;
   player.health = 0;
+  player.deaths++;
   updateHealthUI();
-  mpJoined = false;
-  set(playerRef, null);
+  updateKdUI();
+
+  // credit the kill to whoever got the finishing hit
+  if (killerId) {
+    update(ref(db, `rooms/${ROOM_ID}/players/${killerId}`), { kills: increment(1) });
+  }
+  update(playerRef, { health: 0, deaths: player.deaths });
+  push(ref(db, `rooms/${ROOM_ID}/killfeed`), {
+    fraggerName: killerName || "Someone", fraggedName: myName, ts: serverTimestamp(),
+  });
+
   controls.unlock();
-  document.getElementById("startPrompt").textContent = "CLICK TO RESPAWN";
   const h1 = overlay.querySelector("h1");
-  h1.textContent = `YOU DIED — Score: ${score}`;
+  h1.textContent = `ELIMINATED by ${killerName || "someone"}`;
+  startBtn.textContent = "RESPAWN";
   overlay.classList.remove("hidden");
 }
 
@@ -630,18 +691,16 @@ function respawnPlayer() {
   player.alive = true;
   player.health = player.maxHealth;
   updateHealthUI();
-  camera.position.set(0, PLAYER_HEIGHT, 10);
+  camera.position.copy(randomSpawnPoint()).setY(PLAYER_HEIGHT);
   player.velocity.set(0, 0, 0);
-  enemies.forEach(e => scene.remove(e.mesh));
-  enemies.length = 0;
-  wave = 1;
-  score = 0;
-  updateScoreUI();
   weapon.mag = weapon.magSize;
   updateAmmoUI();
-  overlay.querySelector("h1").textContent = "ARENA SHOOTER";
-  document.getElementById("startPrompt").textContent = "CLICK TO START";
-  startWave();
+  update(playerRef, {
+    x: camera.position.x, y: camera.position.y, z: camera.position.z,
+    health: player.health, name: myName,
+  });
+  overlay.querySelector("h1").textContent = "ARENA PVP";
+  startBtn.textContent = "START";
 }
 
 controls.addEventListener("lock", () => {
@@ -680,7 +739,6 @@ function animate() {
   const delta = Math.min(clock.getDelta(), 0.1);
 
   if (controls.isLocked && player.alive) {
-    // movement
     const dir = new THREE.Vector3();
     const forwardInput = (move.forward ? 1 : 0) - (move.back ? 1 : 0);
     const rightInput = (move.right ? 1 : 0) - (move.left ? 1 : 0);
@@ -706,7 +764,6 @@ function animate() {
     camera.position.x = newPos.x;
     camera.position.z = newPos.z;
 
-    // gravity / jump
     player.velocity.y -= GRAVITY * delta;
     camera.position.y += player.velocity.y * delta;
     if (camera.position.y <= PLAYER_HEIGHT) {
@@ -715,26 +772,7 @@ function animate() {
       player.onGround = true;
     }
 
-    // weapon cooldown
     if (weapon.fireCooldown > 0) weapon.fireCooldown -= delta;
-
-    // enemies update
-    for (const enemy of enemies) {
-      const ePos = enemy.mesh.position;
-      const toPlayer = new THREE.Vector3(camera.position.x - ePos.x, 0, camera.position.z - ePos.z);
-      const dist = toPlayer.length();
-      if (dist > 0.001) toPlayer.normalize();
-
-      if (dist > ENEMY_ATTACK_RANGE) {
-        ePos.x += toPlayer.x * ENEMY_SPEED * delta;
-        ePos.z += toPlayer.z * ENEMY_SPEED * delta;
-        enemy.mesh.rotation.y = Math.atan2(toPlayer.x, toPlayer.z);
-      } else if (enemy.attackCooldown <= 0) {
-        damagePlayer(ENEMY_DAMAGE);
-        enemy.attackCooldown = ENEMY_ATTACK_COOLDOWN;
-      }
-      if (enemy.attackCooldown > 0) enemy.attackCooldown -= delta;
-    }
   }
 
   updateMultiplayer(delta);
@@ -743,9 +781,8 @@ function animate() {
 
 updateHealthUI();
 updateAmmoUI();
-updateScoreUI();
+updateKdUI();
 animate();
-startWave();
 </script>
 </body>
 </html>
