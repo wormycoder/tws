@@ -481,10 +481,31 @@ function attachHeldGun(rigModel) {
   // (parent is visited before children), which is what we want to parent
   // the gun to so it follows the arm's rotation during the walk animation.
   const armBone = rigModel.getObjectByName("right arm");
-  if (!armBone || !heldPistolTemplate) return null;
+  if (!armBone) {
+    console.warn("[held gun] no 'right arm' bone found on this rig — check the exact bone/group name in player.glb.");
+    return null;
+  }
+  if (!heldPistolTemplate) {
+    console.warn("[held gun] pistol.glb hasn't finished loading yet — will retry automatically.");
+    return null;
+  }
   const gun = heldPistolTemplate.clone(true);
   armBone.add(gun);
   applyHeldGunPose(gun);
+
+  // Bright, unmissable marker at the exact attach point — makes it obvious
+  // where the gun's origin is even if the model itself is misscaled,
+  // rotated oddly, or has ended up invisible. Only shown in "held" debug
+  // mode (see debug tool below).
+  const marker = new THREE.Mesh(
+    new THREE.SphereGeometry(0.06, 8, 8),
+    new THREE.MeshBasicMaterial({ color: 0xff00ff })
+  );
+  marker.visible = false;
+  armBone.add(marker);
+  gun.userData.debugMarker = marker;
+
+  console.log("[held gun] attached OK to 'right arm' bone.", gun);
   return gun;
 }
 
@@ -493,6 +514,10 @@ function applyHeldGunPose(gun) {
   gun.position.copy(heldGunPose.position);
   gun.rotation.set(heldGunPose.rotX, heldGunPose.rotY, heldGunPose.rotZ);
   gun.scale.setScalar(heldGunPose.scale);
+  if (gun.userData.debugMarker) {
+    gun.userData.debugMarker.position.copy(heldGunPose.position);
+    gun.userData.debugMarker.visible = gunDebug && debugMode === "held";
+  }
 }
 
 function createOtherPlayerMesh() {
@@ -521,7 +546,7 @@ function createOtherPlayerMesh() {
     body.castShadow = true;
     group.add(body);
   }
-  return { mesh: group, mixer, walkAction, heldGun };
+  return { mesh: group, mixer, walkAction, heldGun, isFallback: !playerModelTemplate };
 }
 
 let mpJoined = false;
@@ -552,6 +577,7 @@ onValue(roomPlayersRef, (snapshot) => {
       scene.add(built.mesh);
       entry = {
         mesh: built.mesh, mixer: built.mixer, walkAction: built.walkAction, heldGun: built.heldGun,
+        isFallback: built.isFallback,
         targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0,
         lastPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0),
       };
@@ -579,7 +605,27 @@ onValue(roomPlayersRef, (snapshot) => {
 let lastNetUpdate = 0;
 const NET_UPDATE_INTERVAL = 0.1; // seconds, ~10Hz
 function updateMultiplayer(delta) {
-  for (const entry of otherPlayers.values()) {
+  for (const [id, entry] of otherPlayers.entries()) {
+    // if player.glb finished loading after this player already joined as
+    // a fallback capsule, swap them over to the real rig (+ gun) now
+    if (entry.isFallback && playerModelTemplate) {
+      const wasSelected = entry.mesh.userData.playerId;
+      const pos = entry.mesh.position.clone();
+      const rot = entry.mesh.rotation.y;
+      scene.remove(entry.mesh);
+      const built = createOtherPlayerMesh();
+      built.mesh.userData.playerId = wasSelected;
+      built.mesh.position.copy(pos);
+      built.mesh.rotation.y = rot;
+      scene.add(built.mesh);
+      entry.mesh = built.mesh;
+      entry.mixer = built.mixer;
+      entry.walkAction = built.walkAction;
+      entry.heldGun = built.heldGun;
+      entry.isFallback = built.isFallback;
+      console.log("[player rig] upgraded", id, "from fallback capsule to real rig.");
+    }
+
     entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
     entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
 
