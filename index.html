@@ -718,8 +718,8 @@ const gunAimPose = { position: new THREE.Vector3(0, -1.34, 0.05), rotY: 0, scale
    ============================================================ */
 let gunKickZ = 0;    // current backward push (added to gunGroup.position.z)
 let gunKickRotX = 0; // current muzzle-up tilt (added to gunGroup.rotation.x)
-const GUN_KICK_PUSH = 0.035;  // world units — subtle
-const GUN_KICK_TILT = 0.09;   // radians — subtle
+const GUN_KICK_PUSH = 0.02;   // world units — subtle
+const GUN_KICK_TILT = 0.05;   // radians — subtle
 const GUN_KICK_RETURN_SPEED = 10; // higher = snaps back faster
 
 function applyGunRecoilKick() {
