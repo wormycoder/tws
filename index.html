@@ -302,8 +302,8 @@ const controls = new PointerLockControls(camera, renderer.domElement);
 // it will never need its own position set relative to the world, only
 // relative to the camera.
 const gunGroup = new THREE.Group();
-gunGroup.position.set(0.22, -0.22, -0.4);
-gunGroup.rotation.set(0, Math.PI, 0);
+gunGroup.position.set(0.4, -1.38, -0.1);
+gunGroup.rotation.set(0, -0.008, 0);
 gunGroup.scale.set(1, 1, 1);
 camera.add(gunGroup);
 scene.add(camera);
@@ -344,26 +344,28 @@ function showLoadError(path) {
 
 /* ============================================================
    GUN POSITION DEBUG TOOL
-   Press ` (backtick) to toggle. While on:
+   Press ` (backtick) to toggle. Press \ to switch between editing
+   the hip-fire pose and the aim-down-sights pose (forces aim on
+   while editing that one, so you can see it live).
      I/K = forward/back   J/L = left/right   U/O = up/down
      , / . = rotate Y      [ / ] = scale down/up
    Current values print to the on-screen panel AND the console
-   every time you adjust something — read them off there once it
-   looks right, then tell me the numbers (or edit gunGroup's
-   position/rotation/scale near the top of the script yourself).
+   every time you adjust something.
    ============================================================ */
 let gunDebug = false;
+let debugEditingAim = false;
 const gunDebugEl = document.createElement("div");
 gunDebugEl.style.cssText = "position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.75);color:#6f6;padding:10px 14px;font:12px monospace;z-index:999;border-radius:4px;white-space:pre;display:none;";
 document.body.appendChild(gunDebugEl);
 
 function refreshGunDebugPanel() {
-  const p = gunGroup.position, r = gunGroup.rotation, s = gunGroup.scale;
+  const pose = debugEditingAim ? gunAimPose : gunHipPose;
   const text =
-`GUN DEBUG (\` to hide)
-pos: ${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)}
-rotY: ${r.y.toFixed(3)}
-scale: ${s.x.toFixed(3)}
+`GUN DEBUG (\` to hide, \\ to switch pose)
+editing: ${debugEditingAim ? "AIM" : "HIP"}
+pos: ${pose.position.x.toFixed(3)}, ${pose.position.y.toFixed(3)}, ${pose.position.z.toFixed(3)}
+rotY: ${pose.rotY.toFixed(3)}
+scale: ${pose.scale.toFixed(3)}
 I/K fwd-back  J/L left-right  U/O up-down
 , / . rotate   [ / ] scale`;
   gunDebugEl.textContent = text;
@@ -374,22 +376,30 @@ document.addEventListener("keydown", (e) => {
   if (e.code === "Backquote") {
     gunDebug = !gunDebug;
     gunDebugEl.style.display = gunDebug ? "block" : "none";
+    if (!gunDebug) isAiming = false; // release forced-aim preview on exit
     if (gunDebug) refreshGunDebugPanel();
     return;
   }
   if (!gunDebug) return;
+  if (e.code === "Backslash") {
+    debugEditingAim = !debugEditingAim;
+    isAiming = debugEditingAim; // force the aim pose visible while you tune it
+    refreshGunDebugPanel();
+    return;
+  }
+  const pose = debugEditingAim ? gunAimPose : gunHipPose;
   const STEP = 0.02, ROT_STEP = 0.05, SCALE_STEP = 0.05;
   switch (e.code) {
-    case "KeyI": gunGroup.position.z -= STEP; break;
-    case "KeyK": gunGroup.position.z += STEP; break;
-    case "KeyJ": gunGroup.position.x -= STEP; break;
-    case "KeyL": gunGroup.position.x += STEP; break;
-    case "KeyU": gunGroup.position.y += STEP; break;
-    case "KeyO": gunGroup.position.y -= STEP; break;
-    case "Comma": gunGroup.rotation.y -= ROT_STEP; break;
-    case "Period": gunGroup.rotation.y += ROT_STEP; break;
-    case "BracketLeft": gunGroup.scale.multiplyScalar(1 - SCALE_STEP); break;
-    case "BracketRight": gunGroup.scale.multiplyScalar(1 + SCALE_STEP); break;
+    case "KeyI": pose.position.z -= STEP; break;
+    case "KeyK": pose.position.z += STEP; break;
+    case "KeyJ": pose.position.x -= STEP; break;
+    case "KeyL": pose.position.x += STEP; break;
+    case "KeyU": pose.position.y += STEP; break;
+    case "KeyO": pose.position.y -= STEP; break;
+    case "Comma": pose.rotY -= ROT_STEP; break;
+    case "Period": pose.rotY += ROT_STEP; break;
+    case "BracketLeft": pose.scale *= (1 - SCALE_STEP); break;
+    case "BracketRight": pose.scale *= (1 + SCALE_STEP); break;
     default: return;
   }
   refreshGunDebugPanel();
@@ -669,7 +679,51 @@ document.addEventListener("keyup", (e) => {
 
 document.addEventListener("mousedown", (e) => {
   if (e.button === 0 && controls.isLocked) shoot();
+  if (e.button === 2 && controls.isLocked) isAiming = true;
 });
+document.addEventListener("mouseup", (e) => {
+  if (e.button === 2) isAiming = false;
+});
+// stop the browser's right-click menu from popping up while playing
+renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* ============================================================
+   AIM DOWN SIGHTS (hold right click)
+   Blends the gun toward a centered "aim" pose, zooms the camera FOV
+   in, and slows movement — then eases all three back on release.
+   The aim pose starts as a guess relative to your tuned hip-fire
+   position; use the debug tool's "aim" mode (press \\ to switch which
+   pose it's editing) to dial it in the same way you did the hip pose.
+   ============================================================ */
+let isAiming = false;
+let aimBlend = 0; // 0 = hip, 1 = fully aimed
+const ADS_BLEND_SPEED = 9;
+const HIP_FOV = 75;
+const AIM_FOV = 52;
+const AIM_SPEED_MULTIPLIER = 0.55;
+
+const gunHipPose = { position: new THREE.Vector3(0.4, -1.38, -0.1), rotY: -0.008, scale: 1 };
+const gunAimPose = { position: new THREE.Vector3(0, -1.32, 0.05), rotY: 0, scale: 1 };
+
+function updateAimDownSights(delta) {
+  const target = isAiming ? 1 : 0;
+  aimBlend += (target - aimBlend) * Math.min(1, ADS_BLEND_SPEED * delta);
+
+  gunGroup.position.lerpVectors(gunHipPose.position, gunAimPose.position, aimBlend);
+  gunGroup.rotation.y = gunHipPose.rotY + (gunAimPose.rotY - gunHipPose.rotY) * aimBlend;
+  const s = gunHipPose.scale + (gunAimPose.scale - gunHipPose.scale) * aimBlend;
+  gunGroup.scale.setScalar(s);
+
+  const fov = HIP_FOV + (AIM_FOV - HIP_FOV) * aimBlend;
+  if (Math.abs(camera.fov - fov) > 0.01) {
+    camera.fov = fov;
+    camera.updateProjectionMatrix();
+  }
+}
+
+function currentMoveSpeed() {
+  return WALK_SPEED * (1 - aimBlend * (1 - AIM_SPEED_MULTIPLIER));
+}
 
 /* ============================================================
    AUDIO (simple synthesized SFX, no external files needed)
@@ -892,8 +946,9 @@ function animate() {
     if (moveVec.lengthSq() > 0) moveVec.normalize();
 
     const newPos = camera.position.clone();
-    newPos.x += moveVec.x * WALK_SPEED * delta;
-    newPos.z += moveVec.z * WALK_SPEED * delta;
+    const speed = currentMoveSpeed();
+    newPos.x += moveVec.x * speed * delta;
+    newPos.z += moveVec.z * speed * delta;
     resolveObstacleCollision(newPos, PLAYER_RADIUS);
     camera.position.x = newPos.x;
     camera.position.z = newPos.z;
@@ -909,6 +964,7 @@ function animate() {
     if (weapon.fireCooldown > 0) weapon.fireCooldown -= delta;
   }
 
+  updateAimDownSights(delta);
   updateMultiplayer(delta);
   renderer.render(scene, camera);
 }
