@@ -106,7 +106,9 @@
 {
   "imports": {
     "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/",
+    "firebase/app": "https://www.gstatic.com/firebasejs/10.13.0/firebase-app.js",
+    "firebase/database": "https://www.gstatic.com/firebasejs/10.13.0/firebase-database.js"
   }
 }
 </script>
@@ -117,6 +119,104 @@ import { PointerLockControls } from "three/addons/controls/PointerLockControls.j
 // If you export models from Blockbench/Blender as .glb, use this loader to swap
 // them in for the primitive geometry below. See the README for how.
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
+import { initializeApp } from "firebase/app";
+import {
+  getDatabase, ref, set, update, onValue, onDisconnect, serverTimestamp
+} from "firebase/database";
+
+/* ============================================================
+   MULTIPLAYER (Firebase Realtime Database)
+   This syncs player positions/rotations/health so people in the
+   same room can see each other move around. Shooting between
+   players isn't wired up yet — see README for why and next steps.
+   ============================================================ */
+const firebaseConfig = {
+  apiKey: "AIzaSyCAzhR53W2LRZzGpPj2I5qF65Pb1SzdpRs",
+  authDomain: "yt-video-editor-6db87.firebaseapp.com",
+  databaseURL: "https://yt-video-editor-6db87-default-rtdb.firebaseio.com",
+  projectId: "yt-video-editor-6db87",
+  storageBucket: "yt-video-editor-6db87.firebasestorage.app",
+  messagingSenderId: "667332883360",
+  appId: "1:667332883360:web:309f73038049af5614aac5",
+};
+const firebaseApp = initializeApp(firebaseConfig);
+const db = getDatabase(firebaseApp);
+
+const ROOM_ID = "arena1"; // change this to run separate matches
+const playerId = "p_" + Math.random().toString(36).slice(2, 10);
+const playerRef = ref(db, `rooms/${ROOM_ID}/players/${playerId}`);
+const roomPlayersRef = ref(db, `rooms/${ROOM_ID}/players`);
+
+const otherPlayers = new Map(); // id -> { mesh, targetPos, targetRotY }
+const otherPlayerMat = new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 });
+
+function createOtherPlayerMesh() {
+  const group = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.4, 1.1, 4, 8), otherPlayerMat);
+  body.position.y = 0.95;
+  body.castShadow = true;
+  group.add(body);
+  return group;
+}
+
+let mpJoined = false;
+function joinMultiplayer() {
+  if (mpJoined) return;
+  mpJoined = true;
+  onDisconnect(playerRef).remove();
+  set(playerRef, {
+    x: camera.position.x, y: camera.position.y, z: camera.position.z,
+    rotY: camera.rotation.y, health: player.health, joinedAt: serverTimestamp(),
+  });
+}
+
+onValue(roomPlayersRef, (snapshot) => {
+  const data = snapshot.val() || {};
+  const seenIds = new Set();
+
+  for (const [id, state] of Object.entries(data)) {
+    if (id === playerId) continue;
+    seenIds.add(id);
+    let entry = otherPlayers.get(id);
+    if (!entry) {
+      const mesh = createOtherPlayerMesh();
+      scene.add(mesh);
+      entry = { mesh, targetPos: new THREE.Vector3(), targetRotY: 0 };
+      otherPlayers.set(id, entry);
+    }
+    entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
+    entry.targetRotY = state.rotY ?? 0;
+  }
+
+  // remove players who left
+  for (const id of Array.from(otherPlayers.keys())) {
+    if (!seenIds.has(id)) {
+      const entry = otherPlayers.get(id);
+      scene.remove(entry.mesh);
+      otherPlayers.delete(id);
+    }
+  }
+});
+
+let lastNetUpdate = 0;
+const NET_UPDATE_INTERVAL = 0.1; // seconds, ~10Hz
+function updateMultiplayer(delta) {
+  // smoothly interpolate other players toward their latest known position
+  for (const entry of otherPlayers.values()) {
+    entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
+    entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
+  }
+
+  if (!mpJoined || !player.alive) return;
+  lastNetUpdate += delta;
+  if (lastNetUpdate >= NET_UPDATE_INTERVAL) {
+    lastNetUpdate = 0;
+    update(playerRef, {
+      x: camera.position.x, y: camera.position.y, z: camera.position.z,
+      rotY: camera.rotation.y, health: player.health,
+    });
+  }
+}
 
 /* ============================================================
    SCENE / RENDERER / CAMERA
@@ -260,7 +360,10 @@ overlay.addEventListener("click", () => {
   if (!controls.isLocked) controls.lock();
 });
 
-controls.addEventListener("lock", () => { overlay.classList.add("hidden"); });
+controls.addEventListener("lock", () => {
+  overlay.classList.add("hidden");
+  joinMultiplayer();
+});
 controls.addEventListener("unlock", () => {
   if (player.alive) overlay.classList.remove("hidden");
 });
@@ -514,6 +617,8 @@ function playerDie() {
   player.alive = false;
   player.health = 0;
   updateHealthUI();
+  mpJoined = false;
+  set(playerRef, null);
   controls.unlock();
   document.getElementById("startPrompt").textContent = "CLICK TO RESPAWN";
   const h1 = overlay.querySelector("h1");
@@ -632,6 +737,7 @@ function animate() {
     }
   }
 
+  updateMultiplayer(delta);
   renderer.render(scene, camera);
 }
 
