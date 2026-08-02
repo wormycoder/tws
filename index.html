@@ -256,6 +256,10 @@ renderer.domElement.addEventListener("click", () => {
   if (!controls.isLocked) controls.lock();
 });
 
+overlay.addEventListener("click", () => {
+  if (!controls.isLocked) controls.lock();
+});
+
 controls.addEventListener("lock", () => { overlay.classList.add("hidden"); });
 controls.addEventListener("unlock", () => {
   if (player.alive) overlay.classList.remove("hidden");
