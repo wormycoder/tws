@@ -11,6 +11,7 @@
 
   /* --- HUD --- */
   #hud { position: fixed; inset: 0; pointer-events: none; color: #fff; z-index: 10; }
+  #hud.lobby #crosshair, #hud.lobby #statBar, #hud.lobby #kdBox, #hud.lobby #weaponBar { display: none; }
 
   #crosshair {
     position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -31,7 +32,7 @@
   #hitmarker::before { left: 50%; top: 0; width: 3px; height: 100%; transform: translateX(-50%); }
   #hitmarker::after { top: 50%; left: 0; height: 3px; width: 100%; transform: translateY(-50%); }
   #hitmarker.show { animation: hitflash 0.15s ease-out; }
-  #hitmarker.kill::before, #hitmarker.kill::after { background: #ffcc33; }
+  #hitmarker.head::before, #hitmarker.head::after { background: #ffcc33; }
   @keyframes hitflash { 0% { opacity: 1; transform: translate(-50%,-50%) rotate(45deg) scale(1.4); } 100% { opacity: 0; transform: translate(-50%,-50%) rotate(45deg) scale(1); } }
 
   #damageFlash {
@@ -40,21 +41,45 @@
   }
   #damageFlash.show { opacity: 1; transition: none; }
 
-  #statBar { position: absolute; left: 20px; bottom: 20px; width: 260px; }
+  #statBar { position: absolute; left: 20px; bottom: 20px; width: 280px; }
   .barLabel { font-size: 12px; letter-spacing: 1px; text-transform: uppercase; opacity: 0.8; margin-bottom: 4px; text-shadow: 0 1px 2px #000; }
-  .barBg { width: 100%; height: 16px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); margin-bottom: 12px; }
+  .barBg { width: 100%; height: 16px; background: rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.3); margin-bottom: 10px; }
   .barFill { height: 100%; transition: width 0.15s ease-out; }
   #healthFill { background: linear-gradient(90deg, #ff3b3b, #ff7a3b); width: 100%; }
-  #ammoText { font-size: 22px; font-weight: bold; text-shadow: 0 1px 3px #000; letter-spacing: 1px; }
+  #healthNum { font-size: 12px; opacity: 0.85; margin-top: -6px; margin-bottom: 8px; text-shadow: 0 1px 2px #000; }
+  #ammoText { font-size: 26px; font-weight: bold; text-shadow: 0 1px 3px #000; letter-spacing: 1px; }
+  #ammoText .reserve { font-size: 15px; opacity: 0.6; font-weight: normal; }
+  #weaponName { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.75; text-shadow: 0 1px 2px #000; }
   #reloadText { font-size: 13px; color: #ffcc55; margin-top: 2px; visibility: hidden; text-shadow: 0 1px 2px #000; }
+
+  /* weapon slots */
+  #weaponBar { position: absolute; right: 20px; bottom: 20px; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+  .slotChip {
+    display: flex; align-items: center; gap: 10px; background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.18); border-radius: 4px; padding: 6px 12px;
+    font-size: 13px; opacity: 0.55; transition: opacity 0.12s, border-color 0.12s, background 0.12s;
+  }
+  .slotChip.active { opacity: 1; border-color: #6cf; background: rgba(40,80,110,0.65); }
+  .slotChip .num { font-family: monospace; opacity: 0.7; font-size: 11px; }
+  .slotChip .empty { opacity: 0.4; font-style: italic; }
 
   #kdBox { position: absolute; top: 20px; right: 20px; text-align: right; text-shadow: 0 1px 3px #000; }
   #killsVal { font-size: 30px; font-weight: bold; }
   #kdLabel { font-size: 12px; text-transform: uppercase; letter-spacing: 2px; opacity: 0.8; }
   #deathsVal { font-size: 14px; opacity: 0.75; margin-top: 2px; }
 
-  #killFeed {
+  #modeBanner {
     position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
+    text-align: center; text-shadow: 0 1px 3px #000;
+  }
+  #modeName { font-size: 14px; text-transform: uppercase; letter-spacing: 3px; opacity: 0.85; font-weight: 600; }
+  #teamScores { font-size: 26px; font-weight: bold; margin-top: 2px; }
+  #teamScores .a { color: #6cf; }
+  #teamScores .b { color: #ff8080; }
+  #teamScores .sep { opacity: 0.4; margin: 0 8px; font-weight: normal; }
+
+  #killFeed {
+    position: absolute; top: 90px; left: 50%; transform: translateX(-50%);
     display: flex; flex-direction: column; gap: 4px; align-items: center;
   }
   .killFeedEntry {
@@ -65,11 +90,12 @@
   .killFeedEntry.show { opacity: 1; transform: translateY(0); }
   .killFeedEntry .fragger { color: #6cf; font-weight: 600; }
   .killFeedEntry .fragged { color: #ff8080; font-weight: 600; }
+  .killFeedEntry .weap { opacity: 0.6; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
 
   #scoreboard {
-    position: absolute; top: 80px; left: 50%; transform: translateX(-50%);
-    background: rgba(10,12,18,0.9); border: 1px solid rgba(255,255,255,0.15);
-    border-radius: 6px; padding: 14px 18px; min-width: 260px;
+    position: absolute; top: 140px; left: 50%; transform: translateX(-50%);
+    background: rgba(10,12,18,0.92); border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 6px; padding: 14px 18px; min-width: 320px;
     visibility: hidden; opacity: 0; transition: opacity 0.15s ease;
   }
   #scoreboard.show { visibility: visible; opacity: 1; }
@@ -79,6 +105,60 @@
   #scoreboard td { padding: 3px 0; }
   #scoreboard td.num { text-align: right; }
   #scoreboard tr.me { color: #6cf; }
+  #scoreboard tr.teamA td:first-child { border-left: 3px solid #6cf; padding-left: 6px; }
+  #scoreboard tr.teamB td:first-child { border-left: 3px solid #ff8080; padding-left: 6px; }
+
+  /* --- Lobby UI --- */
+  #lobbyBar {
+    position: fixed; bottom: 0; left: 0; right: 0; z-index: 15;
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+    padding: 18px; pointer-events: none;
+  }
+  #lobbyBar.hidden { display: none; }
+  #playBtn {
+    pointer-events: auto; font-size: 20px; font-weight: bold; letter-spacing: 2px;
+    padding: 14px 52px; border: none; border-radius: 6px; cursor: pointer;
+    background: linear-gradient(180deg, #7ad4ff, #3aa8e0); color: #04111a;
+    box-shadow: 0 4px 18px rgba(0,0,0,0.5);
+  }
+  #playBtn:hover { background: linear-gradient(180deg, #9ce0ff, #4fb8ee); }
+  #lobbyHint {
+    position: fixed; top: 24px; left: 50%; transform: translateX(-50%); z-index: 15;
+    color: #fff; text-align: center; text-shadow: 0 2px 6px #000; pointer-events: none;
+  }
+  #lobbyHint.hidden { display: none; }
+  #lobbyHint h2 { font-size: 22px; letter-spacing: 3px; margin-bottom: 4px; }
+  #lobbyHint p { font-size: 13px; opacity: 0.8; }
+
+  /* --- Mode picker --- */
+  #modePicker {
+    position: fixed; inset: 0; background: rgba(8,10,14,0.93); z-index: 25;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; padding: 20px;
+  }
+  #modePicker.hidden { display: none; }
+  #modePicker h2 { font-size: 26px; letter-spacing: 4px; margin-bottom: 6px; }
+  #modePicker .sub { font-size: 13px; opacity: 0.65; margin-bottom: 26px; }
+  .modeGrid { display: grid; grid-template-columns: repeat(4, 150px); gap: 12px; margin-bottom: 10px; }
+  .modeCard {
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.16);
+    border-radius: 6px; padding: 16px 12px; text-align: center; cursor: pointer;
+    transition: background 0.12s, border-color 0.12s, transform 0.12s;
+  }
+  .modeCard:hover { background: rgba(108,204,255,0.14); border-color: #6cf; transform: translateY(-2px); }
+  .modeCard.selected { background: rgba(108,204,255,0.22); border-color: #6cf; }
+  .modeCard .mTitle { font-size: 18px; font-weight: bold; letter-spacing: 1px; }
+  .modeCard .mDesc { font-size: 11px; opacity: 0.65; margin-top: 5px; line-height: 1.4; }
+  .modeCard .mCount { font-size: 11px; color: #6cf; margin-top: 7px; }
+  #modeActions { display: flex; gap: 12px; margin-top: 22px; }
+  #modeActions button {
+    font-size: 15px; padding: 10px 26px; border-radius: 5px; border: none; cursor: pointer;
+    letter-spacing: 1px; font-weight: 600;
+  }
+  #confirmModeBtn { background: #6cf; color: #04111a; }
+  #confirmModeBtn:disabled { background: #3a4652; color: #7d8894; cursor: not-allowed; }
+  #cancelModeBtn { background: rgba(255,255,255,0.12); color: #fff; }
+  #queueStatus { margin-top: 16px; font-size: 13px; color: #ffcc55; min-height: 18px; }
 
   /* --- Overlays --- */
   #overlay {
@@ -87,7 +167,7 @@
     text-align: center; z-index: 20;
   }
   #overlay h1 { font-size: 42px; margin-bottom: 10px; letter-spacing: 2px; }
-  #overlay p { font-size: 15px; opacity: 0.85; margin: 4px 0; max-width: 480px; line-height: 1.5; }
+  #overlay p { font-size: 15px; opacity: 0.85; margin: 4px 0; max-width: 520px; line-height: 1.5; }
   #overlay .key { display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.35); border-radius: 4px; padding: 1px 7px; margin: 0 2px; font-family: monospace; }
   #nameInput {
     margin-top: 22px; font-size: 16px; padding: 8px 14px; border-radius: 4px;
@@ -102,11 +182,24 @@
   }
   #startBtn:hover { background: #8dd8ff; }
   #overlay.hidden { display: none; }
+
+  #matchResult {
+    position: fixed; inset: 0; background: rgba(8,10,14,0.9); z-index: 24;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #fff; text-align: center;
+  }
+  #matchResult.hidden { display: none; }
+  #matchResult h1 { font-size: 44px; letter-spacing: 3px; margin-bottom: 8px; }
+  #matchResult .detail { font-size: 16px; opacity: 0.8; margin-bottom: 22px; }
+  #backToLobbyBtn {
+    font-size: 16px; padding: 11px 30px; border-radius: 5px; border: none;
+    background: #6cf; color: #04111a; font-weight: bold; cursor: pointer; letter-spacing: 1px;
+  }
 </style>
 </head>
 <body>
 
-<div id="hud">
+<div id="hud" class="lobby">
   <div id="crosshair"></div>
   <div id="hitmarker"></div>
   <div id="damageFlash"></div>
@@ -114,14 +207,23 @@
   <div id="statBar">
     <div class="barLabel">Health</div>
     <div class="barBg"><div class="barFill" id="healthFill"></div></div>
-    <div id="ammoText">12 / 12</div>
+    <div id="healthNum">150 / 150</div>
+    <div id="weaponName">Assault Rifle</div>
+    <div id="ammoText">30 <span class="reserve">/ 120</span></div>
     <div id="reloadText">RELOADING...</div>
   </div>
+
+  <div id="weaponBar"></div>
 
   <div id="kdBox">
     <div id="killsVal">0</div>
     <div id="kdLabel">Kills</div>
     <div id="deathsVal">0 deaths</div>
+  </div>
+
+  <div id="modeBanner">
+    <div id="modeName"></div>
+    <div id="teamScores"></div>
   </div>
 
   <div id="killFeed"></div>
@@ -135,13 +237,39 @@
   </div>
 </div>
 
+<div id="lobbyHint" class="hidden">
+  <h2>LOBBY</h2>
+  <p>Walk around freely — no shooting here. Press PLAY to pick a mode.</p>
+</div>
+
+<div id="lobbyBar" class="hidden">
+  <button id="playBtn">PLAY</button>
+</div>
+
+<div id="modePicker" class="hidden">
+  <h2>SELECT MODE</h2>
+  <div class="sub">Matches start when enough players have queued for the same mode.</div>
+  <div class="modeGrid" id="modeGrid"></div>
+  <div id="queueStatus"></div>
+  <div id="modeActions">
+    <button id="confirmModeBtn" disabled>QUEUE UP</button>
+    <button id="cancelModeBtn">BACK</button>
+  </div>
+</div>
+
+<div id="matchResult" class="hidden">
+  <h1 id="matchResultTitle">VICTORY</h1>
+  <div class="detail" id="matchResultDetail"></div>
+  <button id="backToLobbyBtn">BACK TO LOBBY</button>
+</div>
+
 <div id="overlay">
   <h1>ARENA PVP</h1>
   <p><span class="key">W A S D</span> move &nbsp; <span class="key">MOUSE</span> look &nbsp; <span class="key">SPACE</span> jump</p>
-  <p><span class="key">LEFT CLICK</span> shoot &nbsp; <span class="key">R</span> reload &nbsp; <span class="key">TAB</span> scoreboard</p>
-  <p>Everyone in this room is an opponent. Last hits win.</p>
+  <p><span class="key">LEFT CLICK</span> shoot &nbsp; <span class="key">RIGHT CLICK</span> aim &nbsp; <span class="key">R</span> reload</p>
+  <p><span class="key">1</span> primary &nbsp; <span class="key">2</span> secondary &nbsp; <span class="key">3</span> melee &nbsp; <span class="key">4</span> utility &nbsp; <span class="key">TAB</span> scoreboard</p>
   <input id="nameInput" type="text" maxlength="16" placeholder="Your name">
-  <button id="startBtn">START</button>
+  <button id="startBtn">ENTER LOBBY</button>
 </div>
 
 <script type="importmap">
@@ -158,13 +286,11 @@
 <script type="module">
 import * as THREE from "three";
 import { PointerLockControls } from "three/addons/controls/PointerLockControls.js";
-// If you export models from Blockbench/Blender as .glb, use this loader to swap
-// them in for the primitive geometry below. See the README for how.
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { initializeApp } from "firebase/app";
 import {
   getDatabase, ref, set, update, remove, push, onValue, onChildAdded,
-  onDisconnect, serverTimestamp, increment, query, limitToLast
+  onDisconnect, serverTimestamp, increment, query, limitToLast, get, runTransaction
 } from "firebase/database";
 
 /* ============================================================
@@ -182,22 +308,107 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getDatabase(firebaseApp);
 
-const ROOM_ID = "arena1"; // change this to run separate matches
 const playerId = "p_" + Math.random().toString(36).slice(2, 10);
-const playerRef = ref(db, `rooms/${ROOM_ID}/players/${playerId}`);
-const roomPlayersRef = ref(db, `rooms/${ROOM_ID}/players`);
-const myIncomingHitsRef = ref(db, `rooms/${ROOM_ID}/players/${playerId}/incomingHits`);
-const killfeedRef = ref(db, `rooms/${ROOM_ID}/killfeed`);
-const killfeedQuery = query(killfeedRef, limitToLast(5));
-
 let myName = "Player" + Math.floor(1000 + Math.random() * 9000);
+
+// --- Where the player currently is: "lobby" or "match" ---
+let gameState = "lobby";     // "lobby" | "queued" | "match"
+let currentRoomId = "lobby"; // firebase room key
+let currentMatchId = null;
+let myTeam = null;           // "A" | "B" | null (FFA)
+
+// refs get rebuilt whenever we switch rooms
+let playerRef = null, roomPlayersRef = null, myIncomingHitsRef = null, killfeedRef = null;
+let unsubPlayers = null, unsubHits = null, unsubFeed = null, unsubMatch = null;
+
+/* ============================================================
+   GAME MODES
+   ============================================================ */
+const GAME_MODES = {
+  "1v1":  { label: "1v1",  desc: "Duel. First to 15 kills.",        teamSize: 1, teams: 2, scoreLimit: 15, teamBased: true },
+  "2v2":  { label: "2v2",  desc: "Two squads. First to 30.",        teamSize: 2, teams: 2, scoreLimit: 30, teamBased: true },
+  "3v3":  { label: "3v3",  desc: "Three a side. First to 40.",      teamSize: 3, teams: 2, scoreLimit: 40, teamBased: true },
+  "4v4":  { label: "4v4",  desc: "Four a side. First to 50.",       teamSize: 4, teams: 2, scoreLimit: 50, teamBased: true },
+  "5v5":  { label: "5v5",  desc: "Full squads. First to 60.",       teamSize: 5, teams: 2, scoreLimit: 60, teamBased: true },
+  "ffa":  { label: "FFA",  desc: "Everyone for themselves. 25 kills.", teamSize: 1, teams: 6, scoreLimit: 25, teamBased: false },
+  "tdm":  { label: "TDM",  desc: "Team deathmatch. First to 50.",   teamSize: 4, teams: 2, scoreLimit: 50, teamBased: true },
+};
+
+/* ============================================================
+   WEAPON DEFINITIONS
+   Damage is per-hit. Head is a separate flat value, not a
+   multiplier, so tuning one doesn't silently change the other.
+
+   MODEL SWAP-IN POINT: each entry names a .glb under models/.
+   If the file is missing the game falls back to a primitive
+   placeholder so it still runs — drop your Blockbench exports
+   in at those paths and they're picked up automatically.
+   ============================================================ */
+const WEAPON_DEFS = {
+  ar: {
+    key: "ar", name: "Assault Rifle", slot: "primary", model: "models/ar.glb",
+    damage: 12, headDamage: 15,
+    magSize: 30, reserveMax: 120,
+    fireRate: 0.095, reloadTime: 2.1, auto: true,
+    spread: 0.013, adsSpread: 0.002, range: 120,
+  },
+  burst: {
+    key: "burst", name: "Burst Rifle", slot: "primary", model: "models/burst.glb",
+    damage: 16, headDamage: 22,
+    magSize: 24, reserveMax: 96,
+    fireRate: 0.42, burstCount: 3, burstDelay: 0.07,
+    reloadTime: 2.3, auto: false,
+    spread: 0.010, adsSpread: 0.0015, range: 130,
+  },
+  pistol: {
+    key: "pistol", name: "Pistol", slot: "secondary", model: "models/pistol.glb",
+    damage: 18, headDamage: 26,
+    magSize: 12, reserveMax: 60,
+    fireRate: 0.16, reloadTime: 1.4, auto: false,
+    spread: 0.015, adsSpread: 0.003, range: 80,
+  },
+  fists: {
+    key: "fists", name: "Fists", slot: "melee", model: "models/fists.glb",
+    damage: 45, headDamage: 60,
+    magSize: Infinity, reserveMax: Infinity,
+    fireRate: 0.55, reloadTime: 0, auto: false,
+    spread: 0, adsSpread: 0, range: 3.0, melee: true,
+  },
+  grenade: {
+    key: "grenade", name: "Grenade", slot: "utility", model: "models/grenade.glb",
+    damage: 110, headDamage: 110,
+    magSize: 1, reserveMax: 2,
+    fireRate: 0.9, reloadTime: 0.9, auto: false,
+    spread: 0, adsSpread: 0, range: 60,
+    throwable: true, blastRadius: 5.5, fuseTime: 2.2, throwSpeed: 16,
+  },
+};
+
+const SLOT_ORDER = ["primary", "secondary", "melee", "utility"];
+const loadout = { primary: "ar", secondary: "pistol", melee: "fists", utility: "grenade" };
+let activeSlot = "primary";
+
+// per-weapon live ammo state, rebuilt on spawn
+const ammoState = {};
+function resetAllAmmo() {
+  for (const slot of SLOT_ORDER) {
+    const key = loadout[slot];
+    if (!key) continue;
+    const def = WEAPON_DEFS[key];
+    ammoState[key] = { mag: def.magSize, reserve: def.reserveMax, reloading: false, reloadTimer: 0 };
+  }
+}
+function activeWeapon() { return WEAPON_DEFS[loadout[activeSlot]]; }
+function activeAmmo() { return ammoState[loadout[activeSlot]]; }
+
+const PLAYER_MAX_HEALTH = 150;
 
 /* ============================================================
    SCENE / RENDERER / CAMERA
    ============================================================ */
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x0a0d14);
-scene.fog = new THREE.Fog(0x0a0d14, 15, 60);
+scene.fog = new THREE.Fog(0x0a0d14, 20, 70);
 
 const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
 
@@ -213,216 +424,121 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-/* ============================================================
-   LIGHTING
-   ============================================================ */
-scene.add(new THREE.AmbientLight(0x8899aa, 0.6));
+scene.add(new THREE.AmbientLight(0x8899aa, 0.65));
 const sun = new THREE.DirectionalLight(0xffffff, 1.1);
 sun.position.set(20, 30, 10);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-sun.shadow.camera.left = -30;
-sun.shadow.camera.right = 30;
-sun.shadow.camera.top = 30;
-sun.shadow.camera.bottom = -30;
+sun.shadow.camera.left = -40; sun.shadow.camera.right = 40;
+sun.shadow.camera.top = 40; sun.shadow.camera.bottom = -40;
 scene.add(sun);
 
 /* ============================================================
-   ARENA
-   Swap-in point: replace these primitive meshes with a GLTF level
-   exported from Blockbench/Blender. Keep the same collision arrays
-   (obstacles) updated with matching box bounds if you do.
+   ARENA + LOBBY GEOMETRY
+   Two separate map groups; only one is visible at a time.
    ============================================================ */
-const ARENA_SIZE = 40;
+const ARENA_SIZE = 44;
+const arenaGroup = new THREE.Group();
+const lobbyGroup = new THREE.Group();
+scene.add(arenaGroup, lobbyGroup);
 
-const groundMat = new THREE.MeshStandardMaterial({ color: 0x2b2f3a, roughness: 0.95 });
-const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA_SIZE, ARENA_SIZE), groundMat);
-ground.rotation.x = -Math.PI / 2;
-ground.receiveShadow = true;
-scene.add(ground);
+const obstacles = [];       // active collision boxes for the current map
+const arenaObstacles = [];
+const lobbyObstacles = [];
 
-const grid = new THREE.GridHelper(ARENA_SIZE, 40, 0x444a58, 0x1c1f28);
-grid.position.y = 0.01;
-scene.add(grid);
+function buildMap(group, obstacleList, opts) {
+  const { size, groundColor, wallColor, obstacleColor, boxes } = opts;
+  const groundMat = new THREE.MeshStandardMaterial({ color: groundColor, roughness: 0.95 });
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(size, size), groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.receiveShadow = true;
+  group.add(ground);
 
-const wallMat = new THREE.MeshStandardMaterial({ color: 0x3a4152, roughness: 0.9 });
-const wallHeight = 6;
-function makeWall(w, h, d, x, y, z) {
-  const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
-  wall.position.set(x, y, z);
-  wall.castShadow = true;
-  wall.receiveShadow = true;
-  scene.add(wall);
-  return wall;
+  const grid = new THREE.GridHelper(size, size, 0x444a58, 0x1c1f28);
+  grid.position.y = 0.01;
+  group.add(grid);
+
+  const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.9 });
+  const wallH = 7, half = size / 2;
+  const mkWall = (w, h, d, x, y, z) => {
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+    wall.position.set(x, y, z);
+    wall.castShadow = true; wall.receiveShadow = true;
+    group.add(wall);
+  };
+  mkWall(size, wallH, 1, 0, wallH/2, -half);
+  mkWall(size, wallH, 1, 0, wallH/2, half);
+  mkWall(1, wallH, size, -half, wallH/2, 0);
+  mkWall(1, wallH, size, half, wallH/2, 0);
+
+  const obMat = new THREE.MeshStandardMaterial({ color: obstacleColor, roughness: 0.8 });
+  for (const [w, h, d, x, z] of boxes) {
+    const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), obMat);
+    box.position.set(x, h/2, z);
+    box.castShadow = true; box.receiveShadow = true;
+    group.add(box);
+    obstacleList.push({ x, z, halfW: w/2 + 0.4, halfD: d/2 + 0.4 });
+  }
+  obstacleList.mapSize = size;
 }
-const half = ARENA_SIZE / 2;
-makeWall(ARENA_SIZE, wallHeight, 1, 0, wallHeight / 2, -half);
-makeWall(ARENA_SIZE, wallHeight, 1, 0, wallHeight / 2, half);
-makeWall(1, wallHeight, ARENA_SIZE, -half, wallHeight / 2, 0);
-makeWall(1, wallHeight, ARENA_SIZE, half, wallHeight / 2, 0);
 
-// Obstacles: used for both rendering AND collision (see `obstacles` array)
-const obstacleMat = new THREE.MeshStandardMaterial({ color: 0x556075, roughness: 0.8 });
-const obstacles = []; // { x, z, halfW, halfD }
-function addObstacle(w, h, d, x, z) {
-  const box = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), obstacleMat);
-  box.position.set(x, h / 2, z);
-  box.castShadow = true;
-  box.receiveShadow = true;
-  scene.add(box);
-  obstacles.push({ x, z, halfW: w / 2 + 0.4, halfD: d / 2 + 0.4 });
-}
-addObstacle(3, 2, 3, 8, 5);
-addObstacle(3, 3, 3, -8, -6);
-addObstacle(2, 2.5, 6, 0, -12);
-addObstacle(4, 2, 2, -12, 8);
-addObstacle(2, 4, 2, 12, -14);
+buildMap(arenaGroup, arenaObstacles, {
+  size: ARENA_SIZE, groundColor: 0x2b2f3a, wallColor: 0x3a4152, obstacleColor: 0x556075,
+  boxes: [
+    [3,2,3, 8,5], [3,3,3, -8,-6], [2,2.5,6, 0,-12], [4,2,2, -12,8], [2,4,2, 12,-14],
+    [6,2,2, -16,-2], [2,3,5, 16,6], [4,2.5,4, -4,16], [3,2,3, 10,18], [3,3,3, -18,14],
+  ],
+});
 
-// Spawn points, spread around the arena away from the center firefight
-const SPAWN_POINTS = [
-  [14, 14], [-14, 14], [14, -14], [-14, -14],
-  [0, 16], [0, -16], [16, 0], [-16, 0],
-];
-function randomSpawnPoint() {
-  const [x, z] = SPAWN_POINTS[Math.floor(Math.random() * SPAWN_POINTS.length)];
-  return new THREE.Vector3(x, 0, z);
+buildMap(lobbyGroup, lobbyObstacles, {
+  size: 30, groundColor: 0x24303a, wallColor: 0x33424f, obstacleColor: 0x44586a,
+  boxes: [
+    [4,1,4, -7,-7], [4,1,4, 7,-7], [4,1,4, -7,7], [4,1,4, 7,7],
+    [2,3,2, 0,-10], [6,0.6,6, 0,0],
+  ],
+});
+
+// Spawn points
+const ARENA_SPAWNS_A = [[-16,-16], [-18,-8], [-8,-18], [-14,-14], [-19,-16]];
+const ARENA_SPAWNS_B = [[16,16], [18,8], [8,18], [14,14], [19,16]];
+const ARENA_SPAWNS_FFA = [[16,16],[-16,16],[16,-16],[-16,-16],[0,18],[0,-18],[18,0],[-18,0]];
+const LOBBY_SPAWNS = [[0,8],[3,8],[-3,8],[6,6],[-6,6]];
+
+function pickSpawn() {
+  let list;
+  if (gameState !== "match") list = LOBBY_SPAWNS;
+  else if (myTeam === "A") list = ARENA_SPAWNS_A;
+  else if (myTeam === "B") list = ARENA_SPAWNS_B;
+  else list = ARENA_SPAWNS_FFA;
+  const [x, z] = list[Math.floor(Math.random() * list.length)];
+  return new THREE.Vector3(x + (Math.random()-0.5)*2, 0, z + (Math.random()-0.5)*2);
 }
+
+function setActiveMap(which) {
+  const inMatch = which === "arena";
+  arenaGroup.visible = inMatch;
+  lobbyGroup.visible = !inMatch;
+  obstacles.length = 0;
+  const src = inMatch ? arenaObstacles : lobbyObstacles;
+  for (const o of src) obstacles.push(o);
+  obstacles.mapSize = src.mapSize;
+}
+setActiveMap("lobby");
 
 /* ============================================================
-   PLAYER (local)
+   PLAYER
    ============================================================ */
 const PLAYER_HEIGHT = 1.7;
 const PLAYER_RADIUS = 0.4;
-camera.position.copy(randomSpawnPoint()).setY(PLAYER_HEIGHT);
+camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
-
-// --- Weapon view-model (pistol.glb) ---
-// Parenting this to `camera` is what "locks" it to a fixed spot on screen —
-// it will never need its own position set relative to the world, only
-// relative to the camera.
-const gunGroup = new THREE.Group();
-gunGroup.position.set(0.4, -1.38, -0.1);
-gunGroup.rotation.set(0, -0.008, 0);
-gunGroup.scale.set(1, 1, 1);
-camera.add(gunGroup);
-scene.add(camera);
-
-let gunMixer = null;
-let shootAction = null;
-const gltfLoader = new GLTFLoader();
-gltfLoader.load(
-  "models/pistol.glb",
-  (gltf) => {
-    const model = gltf.scene;
-    gunGroup.add(model);
-    if (gltf.animations.length > 0) {
-      gunMixer = new THREE.AnimationMixer(model);
-      shootAction = gunMixer.clipAction(gltf.animations.find(a => a.name === "shoot") || gltf.animations[0]);
-      shootAction.setLoop(THREE.LoopOnce);
-      shootAction.clampWhenFinished = true;
-    }
-    // Diagnostics: confirms the file loaded and tells you its real size,
-    // so you can tell "wrong position" apart from "didn't load at all".
-    const box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3());
-    console.log("[pistol.glb] loaded OK. Bounding box size:", size, "— if this looks huge/tiny, that's a scale issue, not a load failure.");
-  },
-  undefined,
-  (err) => {
-    console.error("[pistol.glb] FAILED TO LOAD:", err);
-    showLoadError("models/pistol.glb");
-  }
-);
-
-function showLoadError(path) {
-  const el = document.createElement("div");
-  el.style.cssText = "position:fixed;top:10px;left:10px;background:#a00;color:#fff;padding:10px 14px;font:13px monospace;z-index:999;border-radius:4px;max-width:400px;";
-  el.textContent = `⚠ Failed to load ${path} — check that the file exists at that exact path/case in your repo (open browser console for the real error).`;
-  document.body.appendChild(el);
-}
-
-/* ============================================================
-   GUN POSITION DEBUG TOOL
-   Press ` (backtick) to toggle. Press \ to cycle which pose you're
-   editing: hip-fire -> aim-down-sights -> held gun (other players'
-   hands) -> back to hip. Editing "aim" forces ADS on so you can see
-   it; editing "held" doesn't change your own view (it affects how
-   YOU appear to others) — open a second tab/window to see the effect.
-     I/K = forward/back   J/L = left/right   U/O = up/down
-     , / . = rotate Y     N/M = rotate X     [ / ] = scale down/up
-   Values print to the on-screen panel AND the console on every change.
-   ============================================================ */
-let gunDebug = false;
-let debugMode = "hip"; // "hip" | "aim" | "held"
-const gunDebugEl = document.createElement("div");
-gunDebugEl.style.cssText = "position:fixed;bottom:10px;right:10px;background:rgba(0,0,0,0.75);color:#6f6;padding:10px 14px;font:12px monospace;z-index:999;border-radius:4px;white-space:pre;display:none;";
-document.body.appendChild(gunDebugEl);
-
-function debugPoseFor(mode) {
-  if (mode === "aim") return gunAimPose;
-  if (mode === "held") return heldGunPose;
-  return gunHipPose;
-}
-
-function refreshGunDebugPanel() {
-  const pose = debugPoseFor(debugMode);
-  const text =
-`GUN DEBUG (\` to hide, \\ to switch pose)
-editing: ${debugMode.toUpperCase()}
-pos: ${pose.position.x.toFixed(3)}, ${pose.position.y.toFixed(3)}, ${pose.position.z.toFixed(3)}
-rotX: ${pose.rotX.toFixed(3)}  rotY: ${pose.rotY.toFixed(3)}
-scale: ${pose.scale.toFixed(3)}
-I/K fwd-back  J/L left-right  U/O up-down
-, / . rotateY   N/M rotateX   [ / ] scale`;
-  gunDebugEl.textContent = text;
-  console.log(text.replace(/\n/g, " | "));
-}
-
-document.addEventListener("keydown", (e) => {
-  if (e.code === "Backquote") {
-    gunDebug = !gunDebug;
-    gunDebugEl.style.display = gunDebug ? "block" : "none";
-    if (!gunDebug) isAiming = false; // release forced-aim preview on exit
-    if (gunDebug) refreshGunDebugPanel();
-    return;
-  }
-  if (!gunDebug) return;
-  if (e.code === "Backslash") {
-    debugMode = debugMode === "hip" ? "aim" : debugMode === "aim" ? "held" : "hip";
-    isAiming = debugMode === "aim"; // force the aim pose visible while you tune it
-    refreshGunDebugPanel();
-    return;
-  }
-  const pose = debugPoseFor(debugMode);
-  const STEP = 0.02, ROT_STEP = 0.05, SCALE_STEP = 0.05;
-  switch (e.code) {
-    case "KeyI": pose.position.z -= STEP; break;
-    case "KeyK": pose.position.z += STEP; break;
-    case "KeyJ": pose.position.x -= STEP; break;
-    case "KeyL": pose.position.x += STEP; break;
-    case "KeyU": pose.position.y += STEP; break;
-    case "KeyO": pose.position.y -= STEP; break;
-    case "Comma": pose.rotY -= ROT_STEP; break;
-    case "Period": pose.rotY += ROT_STEP; break;
-    case "KeyN": pose.rotX -= ROT_STEP; break;
-    case "KeyM": pose.rotX += ROT_STEP; break;
-    case "BracketLeft": pose.scale *= (1 - SCALE_STEP); break;
-    case "BracketRight": pose.scale *= (1 + SCALE_STEP); break;
-    default: return;
-  }
-  refreshGunDebugPanel();
-});
-
-const muzzleLight = new THREE.PointLight(0xffcc66, 0, 6);
-muzzleLight.position.set(0.28, -0.24, -1.1);
-camera.add(muzzleLight);
 
 const player = {
   velocity: new THREE.Vector3(),
   onGround: true,
-  health: 100,
-  maxHealth: 100,
+  health: PLAYER_MAX_HEALTH,
+  maxHealth: PLAYER_MAX_HEALTH,
   alive: true,
   kills: 0,
   deaths: 0,
@@ -430,224 +546,1194 @@ const player = {
 
 const move = { forward: false, back: false, left: false, right: false };
 let canJump = true;
-
-const GRAVITY = 22;
-const JUMP_SPEED = 8;
-const WALK_SPEED = 7;
+const GRAVITY = 22, JUMP_SPEED = 8, WALK_SPEED = 7;
 
 /* ============================================================
-   OTHER PLAYERS (remote, rendered + used as shoot targets)
+   WEAPON VIEW-MODELS
+   One group parented to the camera; we swap which weapon's model
+   is visible inside it. Each weapon tries to load its .glb and
+   falls back to a primitive placeholder if that fails.
    ============================================================ */
-const otherPlayers = new Map(); // id -> { mesh, mixer, walkAction, heldGun, targetPos, targetRotY, lastPos, name, kills, deaths }
-const latestPlayerStates = new Map(); // id -> raw db state, for name/kill lookups
-let playerModelTemplate = null;
-let playerWalkClip = null;
-const playerGltfLoader = new GLTFLoader();
-playerGltfLoader.load(
-  "models/player.glb",
+const gunGroup = new THREE.Group();
+camera.add(gunGroup);
+scene.add(camera);
+
+const muzzleLight = new THREE.PointLight(0xffcc66, 0, 6);
+muzzleLight.position.set(0.28, -0.24, -1.1);
+camera.add(muzzleLight);
+
+// Per-weapon view-model poses (hip + aim). Tune live with the debug tool.
+const WEAPON_POSES = {
+  ar:      { hip: { pos: [0.26, -0.26, -0.30], rotX: 0, rotY: 0, scale: 1 },
+             aim: { pos: [0.00, -0.18, -0.22], rotX: 0, rotY: 0, scale: 1 } },
+  burst:   { hip: { pos: [0.26, -0.26, -0.30], rotX: 0, rotY: 0, scale: 1 },
+             aim: { pos: [0.00, -0.18, -0.22], rotX: 0, rotY: 0, scale: 1 } },
+  pistol:  { hip: { pos: [0.40, -1.38, -0.10], rotX: 0, rotY: -0.008, scale: 1 },
+             aim: { pos: [0.00, -1.34,  0.05], rotX: 0, rotY: 0, scale: 1 } },
+  fists:   { hip: { pos: [0.00, -0.30, -0.20], rotX: 0, rotY: 0, scale: 1 },
+             aim: { pos: [0.00, -0.30, -0.20], rotX: 0, rotY: 0, scale: 1 } },
+  grenade: { hip: { pos: [0.28, -0.30, -0.28], rotX: 0, rotY: 0, scale: 1 },
+             aim: { pos: [0.16, -0.22, -0.30], rotX: 0, rotY: 0, scale: 1 } },
+};
+
+const viewModels = {};   // weaponKey -> { group, mixer, shootAction }
+const gltfLoader = new GLTFLoader();
+
+function showLoadNotice(msg, color) {
+  const el = document.createElement("div");
+  el.style.cssText = `position:fixed;top:10px;left:10px;background:${color};color:#fff;padding:8px 12px;font:12px monospace;z-index:999;border-radius:4px;max-width:420px;margin-bottom:4px;`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 9000);
+}
+
+/* --- Placeholder view-models ---
+   Deliberately simple stand-ins so the game is playable before art
+   exists. Replace by dropping a .glb at each weapon's `model` path. */
+function buildPlaceholder(weaponKey) {
+  const g = new THREE.Group();
+  const dark = new THREE.MeshStandardMaterial({ color: 0x23262d, roughness: 0.6, metalness: 0.3 });
+  const mid = new THREE.MeshStandardMaterial({ color: 0x3a3f48, roughness: 0.7, metalness: 0.2 });
+  const accent = new THREE.MeshStandardMaterial({ color: 0x6b7280, roughness: 0.5, metalness: 0.4 });
+  const box = (w,h,d,x,y,z,mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w,h,d), mat); m.position.set(x,y,z); g.add(m); return m; };
+  const tube = (r,len,x,y,z,mat) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r,r,len,10), mat);
+    m.position.set(x,y,z); m.rotation.x = Math.PI/2; g.add(m); return m;
+  };
+
+  switch (weaponKey) {
+    case "ar":
+      box(0.09,0.10,0.62, 0,0,-0.10, mid);
+      box(0.07,0.06,0.30, 0,0.02,-0.46, dark);
+      tube(0.018,0.34, 0,0.02,-0.62, accent);
+      box(0.07,0.16,0.10, 0,-0.12,0.02, dark);
+      box(0.06,0.13,0.22, 0,-0.11,-0.18, dark);
+      box(0.07,0.09,0.24, 0,-0.01,0.26, mid);
+      box(0.03,0.04,0.05, 0,0.08,-0.30, accent);
+      box(0.03,0.04,0.05, 0,0.08,0.02, accent);
+      break;
+    case "burst":
+      box(0.085,0.10,0.54, 0,0,-0.06, mid);
+      box(0.065,0.055,0.26, 0,0.02,-0.40, dark);
+      tube(0.016,0.28, 0,0.02,-0.56, accent);
+      box(0.07,0.15,0.10, 0,-0.115,0.04, dark);
+      box(0.055,0.11,0.18, 0,-0.10,-0.13, dark);
+      box(0.07,0.085,0.26, 0,-0.005,0.26, mid);
+      box(0.035,0.05,0.30, 0,0.085,-0.06, accent);
+      break;
+    case "pistol":
+      box(0.075,0.085,0.28, 0,0.01,-0.06, mid);
+      box(0.07,0.07,0.22, 0,-0.05,-0.03, dark);
+      box(0.07,0.18,0.10, 0,-0.16,0.07, dark);
+      tube(0.013,0.10, 0,0.01,-0.22, accent);
+      box(0.02,0.035,0.02, 0,0.06,-0.17, accent);
+      box(0.03,0.035,0.02, 0,0.06,0.05, accent);
+      break;
+    case "fists": {
+      const skin = new THREE.MeshStandardMaterial({ color: 0xc98b6b, roughness: 0.85 });
+      box(0.15,0.15,0.19, -0.11,-0.03,-0.10, skin);
+      box(0.15,0.15,0.19,  0.11,-0.03,-0.10, skin);
+      break;
+    }
+    case "grenade": {
+      const shell = new THREE.MeshStandardMaterial({ color: 0x3f4a35, roughness: 0.8 });
+      const body = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 10), shell);
+      body.position.set(0,-0.02,-0.06); g.add(body);
+      box(0.03,0.05,0.03, 0,0.055,-0.06, accent);
+      break;
+    }
+    default:
+      box(0.1,0.1,0.4, 0,0,-0.1, mid);
+  }
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  return g;
+}
+
+function loadViewModel(weaponKey) {
+  const def = WEAPON_DEFS[weaponKey];
+  const holder = new THREE.Group();
+  holder.visible = false;
+  gunGroup.add(holder);
+  const entry = { group: holder, mixer: null, shootAction: null, usingPlaceholder: true };
+  viewModels[weaponKey] = entry;
+
+  gltfLoader.load(
+    def.model,
+    (gltf) => {
+      holder.clear();
+      holder.add(gltf.scene);
+      entry.usingPlaceholder = false;
+      if (gltf.animations && gltf.animations.length) {
+        entry.mixer = new THREE.AnimationMixer(gltf.scene);
+        const clip = gltf.animations.find(a => /shoot|fire|attack/i.test(a.name)) || gltf.animations[0];
+        entry.shootAction = entry.mixer.clipAction(clip);
+        entry.shootAction.setLoop(THREE.LoopOnce);
+        entry.shootAction.clampWhenFinished = true;
+      }
+      console.log(`[${weaponKey}] custom model loaded from ${def.model}`);
+    },
+    undefined,
+    () => {
+      // Expected until you add your own art — placeholder stays.
+      console.log(`[${weaponKey}] no model at ${def.model}, using placeholder.`);
+      holder.clear();
+      holder.add(buildPlaceholder(weaponKey));
+      entry.usingPlaceholder = true;
+    }
+  );
+  // start with placeholder immediately so nothing is ever invisible
+  holder.add(buildPlaceholder(weaponKey));
+  return entry;
+}
+
+for (const key of Object.keys(WEAPON_DEFS)) loadViewModel(key);
+
+function refreshViewModelVisibility() {
+  const activeKey = loadout[activeSlot];
+  for (const [key, vm] of Object.entries(viewModels)) {
+    vm.group.visible = (key === activeKey);
+  }
+}
+refreshViewModelVisibility();
+
+/* ============================================================
+   AIM DOWN SIGHTS + GUN RECOIL KICK
+   ============================================================ */
+let isAiming = false;
+let aimBlend = 0;
+const ADS_BLEND_SPEED = 9;
+const HIP_FOV = 75, AIM_FOV = 52;
+const AIM_SPEED_MULTIPLIER = 0.55;
+
+let gunKickZ = 0, gunKickRotX = 0;
+const GUN_KICK_PUSH = 0.02, GUN_KICK_TILT = 0.05, GUN_KICK_RETURN_SPEED = 10;
+function applyGunRecoilKick(scale = 1) {
+  gunKickZ += GUN_KICK_PUSH * scale;
+  gunKickRotX += GUN_KICK_TILT * scale;
+}
+
+const _hipVec = new THREE.Vector3(), _aimVec = new THREE.Vector3();
+function updateAimDownSights(delta) {
+  const canAim = gameState === "match" && !activeWeapon().melee && !activeWeapon().throwable;
+  const target = (isAiming && canAim) ? 1 : 0;
+  aimBlend += (target - aimBlend) * Math.min(1, ADS_BLEND_SPEED * delta);
+
+  const pose = WEAPON_POSES[loadout[activeSlot]] || WEAPON_POSES.ar;
+  _hipVec.fromArray(pose.hip.pos);
+  _aimVec.fromArray(pose.aim.pos);
+  gunGroup.position.lerpVectors(_hipVec, _aimVec, aimBlend);
+  gunGroup.rotation.set(
+    pose.hip.rotX + (pose.aim.rotX - pose.hip.rotX) * aimBlend,
+    pose.hip.rotY + (pose.aim.rotY - pose.hip.rotY) * aimBlend,
+    0
+  );
+  gunGroup.scale.setScalar(pose.hip.scale + (pose.aim.scale - pose.hip.scale) * aimBlend);
+
+  // recoil kick rides on top of the base pose
+  gunKickZ -= gunKickZ * Math.min(1, GUN_KICK_RETURN_SPEED * delta);
+  gunKickRotX -= gunKickRotX * Math.min(1, GUN_KICK_RETURN_SPEED * delta);
+  gunGroup.position.z += gunKickZ;
+  gunGroup.rotation.x += gunKickRotX;
+
+  const fov = HIP_FOV + (AIM_FOV - HIP_FOV) * aimBlend;
+  if (Math.abs(camera.fov - fov) > 0.01) { camera.fov = fov; camera.updateProjectionMatrix(); }
+}
+
+function currentMoveSpeed() {
+  return WALK_SPEED * (1 - aimBlend * (1 - AIM_SPEED_MULTIPLIER));
+}
+
+/* ============================================================
+   REMOTE PLAYERS
+   Hit zones: the rig's "head" node is tagged so headshots can be
+   detected by walking up the hit object's parents.
+   ============================================================ */
+const otherPlayers = new Map();
+const latestPlayerStates = new Map();
+let playerModelTemplate = null, playerWalkClip = null;
+
+new GLTFLoader().load("models/player.glb",
   (gltf) => {
     playerModelTemplate = gltf.scene;
     playerWalkClip = gltf.animations.find(a => a.name === "walking") || gltf.animations[0] || null;
-    console.log("[player.glb] loaded OK.", gltf.animations.length, "animation(s) found.");
+    console.log("[player.glb] loaded OK.");
   },
   undefined,
-  (err) => {
-    console.error("[player.glb] FAILED TO LOAD:", err);
-    showLoadError("models/player.glb");
-  }
+  () => showLoadNotice("models/player.glb failed to load — remote players will be capsules.", "#a00")
 );
 
-// Separate pistol template used to put a gun in every remote player's hand
-// (the local camera view-model uses its own loaded copy — see gunGroup).
 let heldPistolTemplate = null;
-const heldPistolLoader = new GLTFLoader();
-heldPistolLoader.load(
-  "models/pistol.glb",
+new GLTFLoader().load("models/pistol.glb",
   (gltf) => { heldPistolTemplate = gltf.scene; },
   undefined,
-  (err) => console.error("[pistol.glb] failed to load for remote-player hands:", err)
+  () => console.log("[held gun] pistol.glb unavailable for remote hands.")
 );
 
-// Tweak these live: press \` then 9 to edit the held-gun pose (see debug tool).
-const heldGunPose = {
-  position: new THREE.Vector3(0, -0.65, 0.1),
-  rotX: 0, rotY: 0, rotZ: 0,
-  scale: 1,
-};
+const heldGunPose = { position: new THREE.Vector3(0, -0.65, 0.1), rotX: 0, rotY: 0, rotZ: 0, scale: 1 };
+
+function tagHitZones(rigModel) {
+  // Mark the head node so shoot() can distinguish head vs body hits.
+  const head = rigModel.getObjectByName("head");
+  if (head) head.traverse(o => { o.userData.hitZone = "head"; });
+}
 
 function attachHeldGun(rigModel) {
-  // Blockbench exports the arm's pivot group AND its cube with the same
-  // name ("right arm") — getObjectByName finds the pivot group first
-  // (parent is visited before children), which is what we want to parent
-  // the gun to so it follows the arm's rotation during the walk animation.
   const armBone = rigModel.getObjectByName("right arm");
-  if (!armBone) {
-    console.warn("[held gun] no 'right arm' bone found on this rig — check the exact bone/group name in player.glb.");
-    return null;
-  }
-  if (!heldPistolTemplate) {
-    console.warn("[held gun] pistol.glb hasn't finished loading yet — will retry automatically.");
-    return null;
-  }
+  if (!armBone || !heldPistolTemplate) return null;
   const gun = heldPistolTemplate.clone(true);
   armBone.add(gun);
   applyHeldGunPose(gun);
-
-  // Bright, unmissable marker at the exact attach point — makes it obvious
-  // where the gun's origin is even if the model itself is misscaled,
-  // rotated oddly, or has ended up invisible. Only shown in "held" debug
-  // mode (see debug tool below).
-  const marker = new THREE.Mesh(
-    new THREE.SphereGeometry(0.06, 8, 8),
-    new THREE.MeshBasicMaterial({ color: 0xff00ff })
-  );
-  marker.visible = false;
-  armBone.add(marker);
-  gun.userData.debugMarker = marker;
-
-  console.log("[held gun] attached OK to 'right arm' bone.", gun);
   return gun;
 }
-
 function applyHeldGunPose(gun) {
   if (!gun) return;
   gun.position.copy(heldGunPose.position);
   gun.rotation.set(heldGunPose.rotX, heldGunPose.rotY, heldGunPose.rotZ);
   gun.scale.setScalar(heldGunPose.scale);
-  if (gun.userData.debugMarker) {
-    gun.userData.debugMarker.position.copy(heldGunPose.position);
-    gun.userData.debugMarker.visible = gunDebug && debugMode === "held";
-  }
 }
 
-function createOtherPlayerMesh() {
+const TEAM_COLORS = { A: 0x4a90e2, B: 0xe25555 };
+
+function createOtherPlayerMesh(team) {
   const group = new THREE.Group();
   let mixer = null, walkAction = null, heldGun = null;
   if (playerModelTemplate) {
-    // Non-skinned Blockbench rigs (bone hierarchy via parented nodes, no
-    // <skin>) clone safely with a plain deep clone — no SkeletonUtils needed.
     const model = playerModelTemplate.clone(true);
     group.add(model);
+    tagHitZones(model);
     if (playerWalkClip) {
       mixer = new THREE.AnimationMixer(model);
       walkAction = mixer.clipAction(playerWalkClip);
       walkAction.play();
-      walkAction.paused = true; // starts idle; unpaused when they're moving
+      walkAction.paused = true;
     }
-    heldGun = attachHeldGun(model); // null if pistol template isn't loaded yet
+    heldGun = attachHeldGun(model);
+    if (team && TEAM_COLORS[team]) {
+      model.traverse(o => {
+        if (o.isMesh && o.material) {
+          o.material = o.material.clone();
+          if (o.material.color) o.material.color.setHex(TEAM_COLORS[team]);
+        }
+      });
+    }
   } else {
-    // fallback box in case the model hasn't finished loading yet when a
-    // remote player first appears
     const body = new THREE.Mesh(
       new THREE.CapsuleGeometry(0.4, 1.1, 4, 8),
-      new THREE.MeshStandardMaterial({ color: 0x4a90e2, roughness: 0.6 })
+      new THREE.MeshStandardMaterial({ color: team && TEAM_COLORS[team] ? TEAM_COLORS[team] : 0x4a90e2, roughness: 0.6 })
     );
     body.position.y = 0.95;
     body.castShadow = true;
+    body.userData.hitZone = "body";
     group.add(body);
   }
   return { mesh: group, mixer, walkAction, heldGun, isFallback: !playerModelTemplate };
 }
 
-let mpJoined = false;
-function joinMultiplayer() {
+/* ============================================================
+   ROOM MANAGEMENT — join/leave lobby or match rooms
+   ============================================================ */
+function clearRemotePlayers() {
+  for (const entry of otherPlayers.values()) scene.remove(entry.mesh);
+  otherPlayers.clear();
+  latestPlayerStates.clear();
+}
+
+function detachRoomListeners() {
+  if (unsubPlayers) { unsubPlayers(); unsubPlayers = null; }
+  if (unsubHits) { unsubHits(); unsubHits = null; }
+  if (unsubFeed) { unsubFeed(); unsubFeed = null; }
+}
+
+async function leaveCurrentRoom() {
+  detachRoomListeners();
+  if (playerRef) { try { await remove(playerRef); } catch (e) {} }
+  clearRemotePlayers();
+  playerRef = null;
+}
+
+function joinRoom(roomId) {
+  currentRoomId = roomId;
+  playerRef = ref(db, `rooms/${roomId}/players/${playerId}`);
+  roomPlayersRef = ref(db, `rooms/${roomId}/players`);
+  myIncomingHitsRef = ref(db, `rooms/${roomId}/players/${playerId}/incomingHits`);
+  killfeedRef = ref(db, `rooms/${roomId}/killfeed`);
+
   onDisconnect(playerRef).remove();
   set(playerRef, {
     x: camera.position.x, y: camera.position.y, z: camera.position.z,
     rotY: camera.rotation.y, health: player.health,
     name: myName, kills: player.kills, deaths: player.deaths,
+    team: myTeam, weapon: loadout[activeSlot],
     joinedAt: serverTimestamp(),
   });
-  mpJoined = true;
+
+  unsubPlayers = onValue(roomPlayersRef, (snapshot) => {
+    const data = snapshot.val() || {};
+    const seen = new Set();
+    latestPlayerStates.clear();
+
+    for (const [id, state] of Object.entries(data)) {
+      latestPlayerStates.set(id, state);
+      if (id === playerId) continue;
+      seen.add(id);
+      let entry = otherPlayers.get(id);
+      if (!entry) {
+        const built = createOtherPlayerMesh(state.team);
+        built.mesh.userData.playerId = id;
+        scene.add(built.mesh);
+        entry = {
+          mesh: built.mesh, mixer: built.mixer, walkAction: built.walkAction,
+          heldGun: built.heldGun, isFallback: built.isFallback, team: state.team,
+          targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0,
+          lastPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0),
+        };
+        entry.mesh.position.copy(entry.targetPos);
+        otherPlayers.set(id, entry);
+      }
+      entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
+      entry.targetRotY = state.rotY ?? 0;
+      entry.name = state.name ?? "Player";
+      entry.kills = state.kills ?? 0;
+      entry.deaths = state.deaths ?? 0;
+      entry.team = state.team ?? null;
+      entry.mesh.visible = (state.health ?? 1) > 0;
+    }
+
+    for (const id of Array.from(otherPlayers.keys())) {
+      if (!seen.has(id)) {
+        scene.remove(otherPlayers.get(id).mesh);
+        otherPlayers.delete(id);
+      }
+    }
+    updateScoreboardUI();
+    updateTeamScoresUI();
+  });
+
+  unsubHits = onChildAdded(myIncomingHitsRef, (snapshot) => {
+    const hit = snapshot.val();
+    if (!hit) { remove(snapshot.ref); return; }
+    if (!player.alive || gameState !== "match") { remove(snapshot.ref); return; }
+    const shooterState = latestPlayerStates.get(hit.shooterId);
+    const shooterName = shooterState?.name || hit.shooterName || "Someone";
+    damagePlayer(hit.damage || 12, shooterName, hit.shooterId, hit.weapon);
+    remove(snapshot.ref);
+  });
+
+  const feedQ = query(killfeedRef, limitToLast(5));
+  const feedStart = Date.now();
+  unsubFeed = onChildAdded(feedQ, (snapshot) => {
+    const e = snapshot.val();
+    if (!e) return;
+    // skip backlog from before we joined
+    if (e.clientTs && e.clientTs < feedStart - 2000) return;
+    addKillFeedEntry(e.fraggerName, e.fraggedName, e.weapon);
+  });
 }
 
-onValue(roomPlayersRef, (snapshot) => {
-  const data = snapshot.val() || {};
-  const seenIds = new Set();
-  latestPlayerStates.clear();
+/* ============================================================
+   MATCHMAKING
+   Players queue into `queues/{mode}`. The first player to notice
+   the queue is full claims the match via a transaction (so two
+   clients can't both create one), writes the roster, and everyone
+   in it moves to the match room.
+   ============================================================ */
+let queuedMode = null;
+let queueRef = null, unsubQueue = null, unsubMyQueueEntry = null;
 
-  for (const [id, state] of Object.entries(data)) {
-    latestPlayerStates.set(id, state);
-    if (id === playerId) continue;
-    seenIds.add(id);
-    let entry = otherPlayers.get(id);
-    if (!entry) {
-      const built = createOtherPlayerMesh();
-      built.mesh.userData.playerId = id;
-      scene.add(built.mesh);
-      entry = {
-        mesh: built.mesh, mixer: built.mixer, walkAction: built.walkAction, heldGun: built.heldGun,
-        isFallback: built.isFallback,
-        targetPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0), targetRotY: 0,
-        lastPos: new THREE.Vector3(state.x ?? 0, 0, state.z ?? 0),
-      };
-      entry.mesh.position.copy(entry.targetPos);
-      otherPlayers.set(id, entry);
+async function enterQueue(modeKey) {
+  const mode = GAME_MODES[modeKey];
+  if (!mode) return;
+  queuedMode = modeKey;
+  gameState = "queued";
+  queueRef = ref(db, `queues/${modeKey}/${playerId}`);
+  onDisconnect(queueRef).remove();
+  await set(queueRef, { name: myName, ts: serverTimestamp() });
+
+  setQueueStatus(`Queued for ${mode.label} — waiting for players...`);
+
+  // watch my own queue entry: when a match claims me, it writes matchId here
+  unsubMyQueueEntry = onValue(queueRef, (snap) => {
+    const v = snap.val();
+    if (v && v.matchId) {
+      const assignedTeam = v.team ?? null;
+      cleanupQueue();
+      startMatch(v.matchId, modeKey, assignedTeam);
     }
-    entry.targetPos.set(state.x ?? 0, 0, state.z ?? 0);
-    entry.targetRotY = state.rotY ?? 0;
-    entry.name = state.name ?? "Player";
-    entry.kills = state.kills ?? 0;
-    entry.deaths = state.deaths ?? 0;
+  });
+
+  // watch the whole queue to see if we can form a match
+  unsubQueue = onValue(ref(db, `queues/${modeKey}`), async (snap) => {
+    const entries = snap.val() || {};
+    const ids = Object.keys(entries).filter(id => !entries[id].matchId);
+    const needed = mode.teamBased ? mode.teamSize * 2 : Math.min(mode.teams, 4);
+    setQueueStatus(`Queued for ${mode.label} — ${ids.length}/${needed} players...`);
+    if (ids.length < needed) return;
+
+    // only the lowest-sorted id attempts to form the match, to reduce contention
+    ids.sort();
+    if (ids[0] !== playerId) return;
+
+    const roster = ids.slice(0, needed);
+    const matchId = "m_" + Math.random().toString(36).slice(2, 10);
+    const claimRef = ref(db, `queues/${modeKey}`);
+    const result = await runTransaction(claimRef, (current) => {
+      if (!current) return current;
+      const free = Object.keys(current).filter(id => !current[id].matchId);
+      if (free.length < needed) return; // abort
+      free.sort();
+      const chosen = free.slice(0, needed);
+      chosen.forEach((id, i) => {
+        current[id] = {
+          ...current[id],
+          matchId,
+          team: mode.teamBased ? (i % 2 === 0 ? "A" : "B") : null,
+        };
+      });
+      return current;
+    });
+
+    if (result.committed) {
+      await set(ref(db, `matches/${matchId}`), {
+        mode: modeKey, scoreLimit: mode.scoreLimit, teamBased: mode.teamBased,
+        scoreA: 0, scoreB: 0, status: "active", createdAt: serverTimestamp(),
+      });
+    }
+  });
+}
+
+function cleanupQueue() {
+  if (unsubQueue) { unsubQueue(); unsubQueue = null; }
+  if (unsubMyQueueEntry) { unsubMyQueueEntry(); unsubMyQueueEntry = null; }
+  if (queueRef) { remove(queueRef).catch(()=>{}); queueRef = null; }
+}
+
+async function cancelQueue() {
+  cleanupQueue();
+  queuedMode = null;
+  gameState = "lobby";
+  setQueueStatus("");
+}
+
+async function startMatch(matchId, modeKey, team) {
+  await leaveCurrentRoom();
+  currentMatchId = matchId;
+  myTeam = team;
+  gameState = "match";
+  const mode = GAME_MODES[modeKey];
+
+  setActiveMap("arena");
+  player.kills = 0; player.deaths = 0;
+  player.health = player.maxHealth;
+  player.alive = true;
+  resetAllAmmo();
+  activeSlot = "primary";
+  refreshViewModelVisibility();
+  camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
+  player.velocity.set(0,0,0);
+
+  joinRoom(`match_${matchId}`);
+
+  // watch match score/status
+  if (unsubMatch) unsubMatch();
+  unsubMatch = onValue(ref(db, `matches/${matchId}`), (snap) => {
+    const m = snap.val();
+    if (!m) return;
+    currentMatchData = m;
+    updateTeamScoresUI();
+    if (m.status === "ended") showMatchResult(m);
+  });
+
+  document.getElementById("modeName").textContent = mode.label;
+  hudEl.classList.remove("lobby");
+  lobbyBarEl.classList.add("hidden");
+  lobbyHintEl.classList.add("hidden");
+  modePickerEl.classList.add("hidden");
+  updateAllUI();
+}
+
+let currentMatchData = null;
+
+async function returnToLobby() {
+  if (unsubMatch) { unsubMatch(); unsubMatch = null; }
+  await leaveCurrentRoom();
+  currentMatchId = null;
+  currentMatchData = null;
+  myTeam = null;
+  gameState = "lobby";
+  setActiveMap("lobby");
+  player.health = player.maxHealth;
+  player.alive = true;
+  player.kills = 0; player.deaths = 0;
+  resetAllAmmo();
+  camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
+  player.velocity.set(0,0,0);
+  joinRoom("lobby");
+  hudEl.classList.add("lobby");
+  lobbyBarEl.classList.remove("hidden");
+  lobbyHintEl.classList.remove("hidden");
+  matchResultEl.classList.add("hidden");
+  document.getElementById("modeName").textContent = "";
+  document.getElementById("teamScores").innerHTML = "";
+  updateAllUI();
+}
+
+/* ============================================================
+   SCORING
+   ============================================================ */
+async function registerKill(victimTeam) {
+  if (!currentMatchId || !currentMatchData) return;
+  const field = currentMatchData.teamBased
+    ? (myTeam === "A" ? "scoreA" : "scoreB")
+    : null;
+
+  if (field) {
+    await update(ref(db, `matches/${currentMatchId}`), { [field]: increment(1) });
   }
 
-  for (const id of Array.from(otherPlayers.keys())) {
-    if (!seenIds.has(id)) {
-      const entry = otherPlayers.get(id);
-      scene.remove(entry.mesh);
-      otherPlayers.delete(id);
+  // check for match end
+  const snap = await get(ref(db, `matches/${currentMatchId}`));
+  const m = snap.val();
+  if (!m || m.status === "ended") return;
+  if (m.teamBased) {
+    if (m.scoreA >= m.scoreLimit || m.scoreB >= m.scoreLimit) {
+      await update(ref(db, `matches/${currentMatchId}`), {
+        status: "ended", winner: m.scoreA >= m.scoreLimit ? "A" : "B",
+      });
+    }
+  } else {
+    if (player.kills >= m.scoreLimit) {
+      await update(ref(db, `matches/${currentMatchId}`), {
+        status: "ended", winner: playerId, winnerName: myName,
+      });
     }
   }
+}
 
-  updateScoreboardUI();
+/* ============================================================
+   UI ELEMENTS
+   ============================================================ */
+const hudEl = document.getElementById("hud");
+const overlayEl = document.getElementById("overlay");
+const lobbyBarEl = document.getElementById("lobbyBar");
+const lobbyHintEl = document.getElementById("lobbyHint");
+const modePickerEl = document.getElementById("modePicker");
+const matchResultEl = document.getElementById("matchResult");
+const nameInput = document.getElementById("nameInput");
+const startBtn = document.getElementById("startBtn");
+const playBtn = document.getElementById("playBtn");
+const modeGridEl = document.getElementById("modeGrid");
+const confirmModeBtn = document.getElementById("confirmModeBtn");
+const cancelModeBtn = document.getElementById("cancelModeBtn");
+const queueStatusEl = document.getElementById("queueStatus");
+const backToLobbyBtn = document.getElementById("backToLobbyBtn");
+const healthFill = document.getElementById("healthFill");
+const healthNum = document.getElementById("healthNum");
+const damageFlash = document.getElementById("damageFlash");
+const ammoText = document.getElementById("ammoText");
+const weaponNameEl = document.getElementById("weaponName");
+const reloadText = document.getElementById("reloadText");
+const weaponBarEl = document.getElementById("weaponBar");
+const killsValEl = document.getElementById("killsVal");
+const deathsValEl = document.getElementById("deathsVal");
+const hitmarkerEl = document.getElementById("hitmarker");
+const killFeedEl = document.getElementById("killFeed");
+const scoreboardEl = document.getElementById("scoreboard");
+const scoreboardBody = document.getElementById("scoreboardBody");
+
+nameInput.value = myName;
+function setQueueStatus(msg) { queueStatusEl.textContent = msg; }
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+
+/* --- mode picker --- */
+let selectedMode = null;
+for (const [key, mode] of Object.entries(GAME_MODES)) {
+  const card = document.createElement("div");
+  card.className = "modeCard";
+  card.dataset.mode = key;
+  const needed = mode.teamBased ? mode.teamSize * 2 : Math.min(mode.teams, 4);
+  card.innerHTML = `<div class="mTitle">${mode.label}</div><div class="mDesc">${mode.desc}</div><div class="mCount">${needed} players</div>`;
+  card.addEventListener("click", () => {
+    selectedMode = key;
+    document.querySelectorAll(".modeCard").forEach(c => c.classList.remove("selected"));
+    card.classList.add("selected");
+    confirmModeBtn.disabled = false;
+  });
+  modeGridEl.appendChild(card);
+}
+
+playBtn.addEventListener("click", () => {
+  modePickerEl.classList.remove("hidden");
+  if (controls.isLocked) controls.unlock();
+});
+cancelModeBtn.addEventListener("click", () => {
+  cancelQueue();
+  modePickerEl.classList.add("hidden");
+  confirmModeBtn.textContent = "QUEUE UP";
+});
+confirmModeBtn.addEventListener("click", () => {
+  if (!selectedMode) return;
+  if (gameState === "queued") { cancelQueue(); confirmModeBtn.textContent = "QUEUE UP"; return; }
+  enterQueue(selectedMode);
+  confirmModeBtn.textContent = "CANCEL QUEUE";
+});
+backToLobbyBtn.addEventListener("click", () => { returnToLobby(); });
+
+startBtn.addEventListener("click", () => {
+  const typed = nameInput.value.trim();
+  if (typed) myName = typed.slice(0, 16);
+  overlayEl.classList.add("hidden");
+  lobbyBarEl.classList.remove("hidden");
+  lobbyHintEl.classList.remove("hidden");
+  if (!playerRef) joinRoom("lobby");
+  controls.lock();
+});
+nameInput.addEventListener("keydown", (e) => { if (e.code === "Enter") startBtn.click(); });
+
+controls.addEventListener("lock", () => {
+  overlayEl.classList.add("hidden");
+  if (gameState === "match" && !player.alive) respawnPlayer();
+});
+controls.addEventListener("unlock", () => {
+  // don't show the start overlay again once we're past it — the lobby
+  // bar and mode picker are the real UI now
+  if (gameState === "match" && player.alive) {
+    // paused mid-match: nothing to show, click resumes
+  }
+});
+renderer.domElement.addEventListener("click", () => {
+  if (!controls.isLocked && !modePickerEl.classList.contains("hidden")) return;
+  if (!controls.isLocked && overlayEl.classList.contains("hidden") && matchResultEl.classList.contains("hidden")) {
+    controls.lock();
+  }
+});
+renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
+
+/* --- weapon slot chips --- */
+function buildWeaponBar() {
+  weaponBarEl.innerHTML = "";
+  SLOT_ORDER.forEach((slot, i) => {
+    const key = loadout[slot];
+    const def = key ? WEAPON_DEFS[key] : null;
+    const chip = document.createElement("div");
+    chip.className = "slotChip" + (slot === activeSlot ? " active" : "");
+    chip.dataset.slot = slot;
+    chip.innerHTML = def
+      ? `<span class="num">${i+1}</span><span>${def.name}</span>`
+      : `<span class="num">${i+1}</span><span class="empty">empty</span>`;
+    weaponBarEl.appendChild(chip);
+  });
+}
+function refreshWeaponBar() {
+  weaponBarEl.querySelectorAll(".slotChip").forEach(chip => {
+    chip.classList.toggle("active", chip.dataset.slot === activeSlot);
+  });
+}
+buildWeaponBar();
+
+/* --- HUD updates --- */
+function updateHealthUI() {
+  const pct = Math.max(0, player.health / player.maxHealth) * 100;
+  healthFill.style.width = `${pct}%`;
+  healthNum.textContent = `${Math.max(0, Math.round(player.health))} / ${player.maxHealth}`;
+}
+function updateAmmoUI() {
+  const def = activeWeapon(), ammo = activeAmmo();
+  weaponNameEl.textContent = def.name;
+  if (def.magSize === Infinity) {
+    ammoText.innerHTML = `∞`;
+  } else {
+    ammoText.innerHTML = `${ammo.mag} <span class="reserve">/ ${ammo.reserve === Infinity ? "∞" : ammo.reserve}</span>`;
+  }
+  reloadText.style.visibility = ammo.reloading ? "visible" : "hidden";
+}
+function updateKdUI() {
+  killsValEl.textContent = player.kills;
+  deathsValEl.textContent = `${player.deaths} death${player.deaths === 1 ? "" : "s"}`;
+}
+function updateTeamScoresUI() {
+  const el = document.getElementById("teamScores");
+  if (gameState !== "match" || !currentMatchData) { el.innerHTML = ""; return; }
+  if (currentMatchData.teamBased) {
+    el.innerHTML = `<span class="a">${currentMatchData.scoreA ?? 0}</span><span class="sep">—</span><span class="b">${currentMatchData.scoreB ?? 0}</span>`;
+  } else {
+    el.innerHTML = `<span class="a">${player.kills}</span><span class="sep">/</span><span style="opacity:.5">${currentMatchData.scoreLimit}</span>`;
+  }
+}
+function updateScoreboardUI() {
+  const rows = [{ id: playerId, name: myName, kills: player.kills, deaths: player.deaths, team: myTeam }];
+  for (const [id, e] of otherPlayers.entries()) {
+    rows.push({ id, name: e.name, kills: e.kills, deaths: e.deaths, team: e.team });
+  }
+  rows.sort((a,b) => b.kills - a.kills);
+  scoreboardBody.innerHTML = rows.map(r => {
+    const cls = [r.id === playerId ? "me" : "", r.team === "A" ? "teamA" : r.team === "B" ? "teamB" : ""].filter(Boolean).join(" ");
+    return `<tr class="${cls}"><td>${escapeHtml(r.name)}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td></tr>`;
+  }).join("");
+}
+function updateAllUI() {
+  updateHealthUI(); updateAmmoUI(); updateKdUI();
+  refreshWeaponBar(); updateTeamScoresUI(); updateScoreboardUI();
+}
+
+function addKillFeedEntry(fraggerName, fraggedName, weaponKey) {
+  const el = document.createElement("div");
+  el.className = "killFeedEntry";
+  const wName = weaponKey && WEAPON_DEFS[weaponKey] ? WEAPON_DEFS[weaponKey].name : "";
+  el.innerHTML = `<span class="fragger">${escapeHtml(fraggerName)}</span> <span class="weap">${escapeHtml(wName)}</span> <span class="fragged">${escapeHtml(fraggedName)}</span>`;
+  killFeedEl.appendChild(el);
+  requestAnimationFrame(() => el.classList.add("show"));
+  setTimeout(() => { el.classList.remove("show"); setTimeout(() => el.remove(), 300); }, 4500);
+}
+
+function showMatchResult(m) {
+  let won = false, title = "MATCH OVER", detail = "";
+  if (m.teamBased) {
+    won = m.winner === myTeam;
+    title = won ? "VICTORY" : "DEFEAT";
+    detail = `Final score ${m.scoreA} — ${m.scoreB}`;
+  } else {
+    won = m.winner === playerId;
+    title = won ? "VICTORY" : "MATCH OVER";
+    detail = won ? `You won with ${player.kills} kills` : `${m.winnerName || "Someone"} won the match`;
+  }
+  document.getElementById("matchResultTitle").textContent = title;
+  document.getElementById("matchResultTitle").style.color = won ? "#6cf" : "#ff8080";
+  document.getElementById("matchResultDetail").textContent = detail;
+  matchResultEl.classList.remove("hidden");
+  if (controls.isLocked) controls.unlock();
+}
+
+/* ============================================================
+   AUDIO
+   ============================================================ */
+let audioCtx = null;
+function ensureAudio() { if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)(); }
+function playTone(freq, duration, type, volume) {
+  ensureAudio();
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
+  osc.type = type; osc.frequency.value = freq; gain.gain.value = volume;
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start();
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+  osc.stop(audioCtx.currentTime + duration);
+}
+const SFX = {
+  ar:      () => playTone(200, 0.06, "square", 0.11),
+  burst:   () => playTone(240, 0.06, "square", 0.12),
+  pistol:  () => playTone(180, 0.08, "square", 0.15),
+  fists:   () => playTone(120, 0.09, "sine", 0.16),
+  grenade: () => playTone(150, 0.12, "triangle", 0.14),
+};
+function sfxShootFor(key) { (SFX[key] || SFX.pistol)(); }
+function sfxEmpty() { playTone(90, 0.1, "square", 0.1); }
+function sfxHit() { playTone(600, 0.06, "triangle", 0.12); }
+function sfxHeadshot() { playTone(950, 0.08, "triangle", 0.14); }
+function sfxKill() { playTone(300, 0.2, "sawtooth", 0.15); }
+function sfxHurt() { playTone(120, 0.15, "sawtooth", 0.15); }
+function sfxReload() { playTone(400, 0.12, "sine", 0.1); }
+function sfxExplode() { playTone(70, 0.45, "sawtooth", 0.22); }
+
+/* ============================================================
+   SHOOTING
+   ============================================================ */
+const raycaster = new THREE.Raycaster();
+let fireCooldown = 0;
+let triggerHeld = false;
+let burstQueue = 0, burstTimer = 0;
+
+function canFire() {
+  return gameState === "match" && player.alive && controls.isLocked;
+}
+
+function startReload() {
+  const def = activeWeapon(), ammo = activeAmmo();
+  if (def.magSize === Infinity || def.throwable) return;
+  if (ammo.reloading || ammo.mag >= def.magSize || ammo.reserve <= 0 || !player.alive) return;
+  ammo.reloading = true;
+  ammo.reloadTimer = def.reloadTime;
+  sfxReload();
+  updateAmmoUI();
+}
+
+function finishReload() {
+  const def = activeWeapon(), ammo = activeAmmo();
+  const need = def.magSize - ammo.mag;
+  const take = Math.min(need, ammo.reserve);
+  ammo.mag += take;
+  ammo.reserve -= take;
+  ammo.reloading = false;
+  updateAmmoUI();
+}
+
+function tryFire() {
+  if (!canFire()) return;
+  const def = activeWeapon(), ammo = activeAmmo();
+  if (ammo.reloading || fireCooldown > 0) return;
+
+  if (def.magSize !== Infinity && ammo.mag <= 0) {
+    if (ammo.reserve > 0) startReload();
+    else sfxEmpty();
+    return;
+  }
+
+  if (def.burstCount) {
+    burstQueue = def.burstCount;
+    burstTimer = 0;
+    fireCooldown = def.fireRate;
+    fireOneShot();
+    burstQueue--;
+    burstTimer = def.burstDelay;
+    return;
+  }
+
+  fireOneShot();
+  fireCooldown = def.fireRate;
+}
+
+function fireOneShot() {
+  const def = activeWeapon(), ammo = activeAmmo();
+  if (def.magSize !== Infinity) {
+    if (ammo.mag <= 0) return;
+    ammo.mag--;
+  }
+  updateAmmoUI();
+  sfxShootFor(def.key);
+
+  if (def.throwable) { throwGrenade(); return; }
+
+  muzzleLight.intensity = def.melee ? 0 : 3.2;
+  if (!def.melee) setTimeout(() => { muzzleLight.intensity = 0; }, 55);
+
+  const vm = viewModels[def.key];
+  if (vm && vm.shootAction && !isAiming) { vm.shootAction.reset(); vm.shootAction.play(); }
+  applyGunRecoilKick(def.melee ? 0.5 : 1);
+
+  // spread cone
+  const spread = isAiming ? def.adsSpread : def.spread;
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  if (spread > 0) {
+    const a = Math.random() * Math.PI * 2;
+    const r = Math.random() * spread;
+    const up = new THREE.Vector3(0,1,0);
+    const right = new THREE.Vector3().crossVectors(dir, up).normalize();
+    const trueUp = new THREE.Vector3().crossVectors(right, dir).normalize();
+    dir.addScaledVector(right, Math.cos(a) * r).addScaledVector(trueUp, Math.sin(a) * r).normalize();
+  }
+
+  raycaster.set(camera.getWorldPosition(new THREE.Vector3()), dir);
+  raycaster.far = def.range;
+  const targetGroups = Array.from(otherPlayers.values()).filter(e => e.mesh.visible).map(e => e.mesh);
+  const hits = raycaster.intersectObjects(targetGroups, true);
+  if (!hits.length) return;
+
+  const hit = hits[0];
+  if (def.melee && hit.distance > def.range) return;
+
+  // resolve hit zone + owner
+  let obj = hit.object, zone = "body";
+  let node = obj;
+  while (node) {
+    if (node.userData.hitZone === "head") { zone = "head"; break; }
+    node = node.parent;
+  }
+  node = obj;
+  while (node && node.userData.playerId === undefined) node = node.parent;
+  const targetId = node ? node.userData.playerId : null;
+  if (!targetId) return;
+
+  // no friendly fire in team modes
+  const targetEntry = otherPlayers.get(targetId);
+  if (myTeam && targetEntry && targetEntry.team === myTeam) return;
+
+  const dmg = zone === "head" ? def.headDamage : def.damage;
+  push(ref(db, `rooms/${currentRoomId}/players/${targetId}/incomingHits`), {
+    damage: dmg, shooterId: playerId, shooterName: myName,
+    weapon: def.key, zone, ts: serverTimestamp(),
+  });
+
+  if (zone === "head") sfxHeadshot(); else sfxHit();
+  hitmarkerEl.classList.remove("show");
+  hitmarkerEl.classList.toggle("head", zone === "head");
+  void hitmarkerEl.offsetWidth;
+  hitmarkerEl.classList.add("show");
+}
+
+/* ============================================================
+   GRENADES
+   ============================================================ */
+const activeGrenades = [];
+const grenadeGeo = new THREE.SphereGeometry(0.12, 10, 8);
+const grenadeMat = new THREE.MeshStandardMaterial({ color: 0x3f4a35, roughness: 0.8 });
+
+function throwGrenade() {
+  const def = WEAPON_DEFS.grenade;
+  const mesh = new THREE.Mesh(grenadeGeo, grenadeMat);
+  mesh.castShadow = true;
+  const start = camera.getWorldPosition(new THREE.Vector3());
+  const dir = new THREE.Vector3();
+  camera.getWorldDirection(dir);
+  mesh.position.copy(start).addScaledVector(dir, 0.5);
+  scene.add(mesh);
+  activeGrenades.push({
+    mesh,
+    vel: dir.clone().multiplyScalar(def.throwSpeed).add(new THREE.Vector3(0, 3, 0)),
+    fuse: def.fuseTime,
+  });
+  // grenades consume from reserve after each throw
+  const ammo = ammoState.grenade;
+  if (ammo.reserve > 0) {
+    setTimeout(() => { ammo.mag = 1; ammo.reserve--; updateAmmoUI(); }, def.reloadTime * 1000);
+  }
+}
+
+function updateGrenades(delta) {
+  for (let i = activeGrenades.length - 1; i >= 0; i--) {
+    const g = activeGrenades[i];
+    g.vel.y -= GRAVITY * delta;
+    g.mesh.position.addScaledVector(g.vel, delta);
+    if (g.mesh.position.y <= 0.12) {
+      g.mesh.position.y = 0.12;
+      g.vel.y *= -0.4;
+      g.vel.x *= 0.7; g.vel.z *= 0.7;
+    }
+    g.fuse -= delta;
+    if (g.fuse <= 0) {
+      explodeGrenade(g.mesh.position.clone());
+      scene.remove(g.mesh);
+      activeGrenades.splice(i, 1);
+    }
+  }
+}
+
+function explodeGrenade(pos) {
+  const def = WEAPON_DEFS.grenade;
+  sfxExplode();
+
+  // visual flash
+  const flash = new THREE.PointLight(0xffaa44, 8, def.blastRadius * 2.5);
+  flash.position.copy(pos);
+  scene.add(flash);
+  setTimeout(() => scene.remove(flash), 140);
+
+  // damage other players by proximity (they apply it themselves)
+  for (const [id, entry] of otherPlayers.entries()) {
+    if (myTeam && entry.team === myTeam) continue;
+    if (!entry.mesh.visible) continue;
+    const d = entry.mesh.position.distanceTo(pos);
+    if (d > def.blastRadius) continue;
+    const falloff = 1 - (d / def.blastRadius);
+    const dmg = Math.round(def.damage * falloff);
+    if (dmg <= 0) continue;
+    push(ref(db, `rooms/${currentRoomId}/players/${id}/incomingHits`), {
+      damage: dmg, shooterId: playerId, shooterName: myName,
+      weapon: "grenade", zone: "body", ts: serverTimestamp(),
+    });
+    sfxHit();
+  }
+
+  // self-damage
+  const selfD = camera.position.distanceTo(pos);
+  if (selfD <= def.blastRadius && player.alive && gameState === "match") {
+    const falloff = 1 - (selfD / def.blastRadius);
+    damagePlayer(Math.round(def.damage * falloff * 0.6), myName, playerId, "grenade");
+  }
+}
+
+/* ============================================================
+   HEALTH / DEATH / RESPAWN
+   Local player is authoritative over its own health.
+   ============================================================ */
+function damagePlayer(amount, shooterName, shooterId, weaponKey) {
+  if (!player.alive || gameState !== "match") return;
+  player.health -= amount;
+  sfxHurt();
+  damageFlash.classList.remove("show");
+  void damageFlash.offsetWidth;
+  damageFlash.classList.add("show");
+  setTimeout(() => damageFlash.classList.remove("show"), 150);
+  updateHealthUI();
+
+  if (player.health <= 0) playerDie(shooterName, shooterId, weaponKey);
+  else if (playerRef) update(playerRef, { health: player.health });
+}
+
+let respawnTimer = 0;
+function playerDie(killerName, killerId, weaponKey) {
+  player.alive = false;
+  player.health = 0;
+  player.deaths++;
+  updateHealthUI();
+  updateKdUI();
+
+  if (killerId && killerId !== playerId) {
+    update(ref(db, `rooms/${currentRoomId}/players/${killerId}`), { kills: increment(1) });
+  }
+  if (playerRef) update(playerRef, { health: 0, deaths: player.deaths });
+  push(ref(db, `rooms/${currentRoomId}/killfeed`), {
+    fraggerName: killerName || "Someone", fraggedName: myName,
+    weapon: weaponKey || null, clientTs: Date.now(), ts: serverTimestamp(),
+  });
+
+  respawnTimer = 3.0;
+}
+
+function respawnPlayer() {
+  player.alive = true;
+  player.health = player.maxHealth;
+  resetAllAmmo();
+  activeSlot = "primary";
+  refreshViewModelVisibility();
+  camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
+  player.velocity.set(0,0,0);
+  if (playerRef) {
+    update(playerRef, {
+      x: camera.position.x, y: camera.position.y, z: camera.position.z,
+      health: player.health, name: myName,
+    });
+  }
+  updateAllUI();
+}
+
+// count kills locally too (for FFA score + scoreboard)
+let lastKnownKills = 0;
+function pollMyKills() {
+  const st = latestPlayerStates.get(playerId);
+  if (!st) return;
+  if ((st.kills ?? 0) !== lastKnownKills) {
+    lastKnownKills = st.kills ?? 0;
+    if (lastKnownKills > player.kills) {
+      player.kills = lastKnownKills;
+      sfxKill();
+      updateKdUI();
+      registerKill();
+    }
+  }
+}
+
+/* ============================================================
+   INPUT
+   ============================================================ */
+document.addEventListener("keydown", (e) => {
+  if (e.code === "Tab") { e.preventDefault(); scoreboardEl.classList.add("show"); return; }
+  switch (e.code) {
+    case "KeyW": move.forward = true; break;
+    case "KeyS": move.back = true; break;
+    case "KeyA": move.left = true; break;
+    case "KeyD": move.right = true; break;
+    case "Space":
+      if (canJump && player.onGround) {
+        player.velocity.y = JUMP_SPEED;
+        player.onGround = false; canJump = false;
+      }
+      break;
+    case "KeyR": if (gameState === "match") startReload(); break;
+    case "Digit1": switchSlot("primary"); break;
+    case "Digit2": switchSlot("secondary"); break;
+    case "Digit3": switchSlot("melee"); break;
+    case "Digit4": switchSlot("utility"); break;
+  }
+});
+document.addEventListener("keyup", (e) => {
+  switch (e.code) {
+    case "KeyW": move.forward = false; break;
+    case "KeyS": move.back = false; break;
+    case "KeyA": move.left = false; break;
+    case "KeyD": move.right = false; break;
+    case "Space": canJump = true; break;
+    case "Tab": scoreboardEl.classList.remove("show"); break;
+  }
 });
 
+function switchSlot(slot) {
+  if (gameState !== "match") return;
+  if (!loadout[slot] || slot === activeSlot) return;
+  const ammo = activeAmmo();
+  if (ammo) ammo.reloading = false; // cancel reload on swap
+  activeSlot = slot;
+  isAiming = false;
+  refreshViewModelVisibility();
+  refreshWeaponBar();
+  updateAmmoUI();
+  if (playerRef) update(playerRef, { weapon: loadout[slot] });
+}
+
+document.addEventListener("mousedown", (e) => {
+  if (!controls.isLocked) return;
+  if (e.button === 0) { triggerHeld = true; tryFire(); }
+  if (e.button === 2) isAiming = true;
+});
+document.addEventListener("mouseup", (e) => {
+  if (e.button === 0) triggerHeld = false;
+  if (e.button === 2) isAiming = false;
+});
+document.addEventListener("wheel", (e) => {
+  if (gameState !== "match" || !controls.isLocked) return;
+  const idx = SLOT_ORDER.indexOf(activeSlot);
+  const next = SLOT_ORDER[(idx + (e.deltaY > 0 ? 1 : SLOT_ORDER.length - 1)) % SLOT_ORDER.length];
+  switchSlot(next);
+});
+
+/* ============================================================
+   COLLISION
+   ============================================================ */
+function resolveObstacleCollision(pos, radius) {
+  for (const ob of obstacles) {
+    const dx = pos.x - ob.x, dz = pos.z - ob.z;
+    const overlapX = ob.halfW + radius - Math.abs(dx);
+    const overlapZ = ob.halfD + radius - Math.abs(dz);
+    if (overlapX > 0 && overlapZ > 0) {
+      if (overlapX < overlapZ) pos.x += Math.sign(dx) * overlapX;
+      else pos.z += Math.sign(dz) * overlapZ;
+    }
+  }
+  const lim = (obstacles.mapSize || ARENA_SIZE) / 2 - 1;
+  pos.x = Math.max(-lim, Math.min(lim, pos.x));
+  pos.z = Math.max(-lim, Math.min(lim, pos.z));
+}
+
+/* ============================================================
+   NETWORK SYNC
+   ============================================================ */
 let lastNetUpdate = 0;
-const NET_UPDATE_INTERVAL = 0.1; // seconds, ~10Hz
+const NET_UPDATE_INTERVAL = 0.1;
 function updateMultiplayer(delta) {
   for (const [id, entry] of otherPlayers.entries()) {
-    // if player.glb finished loading after this player already joined as
-    // a fallback capsule, swap them over to the real rig (+ gun) now
     if (entry.isFallback && playerModelTemplate) {
-      const wasSelected = entry.mesh.userData.playerId;
-      const pos = entry.mesh.position.clone();
-      const rot = entry.mesh.rotation.y;
+      const pos = entry.mesh.position.clone(), rot = entry.mesh.rotation.y;
       scene.remove(entry.mesh);
-      const built = createOtherPlayerMesh();
-      built.mesh.userData.playerId = wasSelected;
-      built.mesh.position.copy(pos);
-      built.mesh.rotation.y = rot;
+      const built = createOtherPlayerMesh(entry.team);
+      built.mesh.userData.playerId = id;
+      built.mesh.position.copy(pos); built.mesh.rotation.y = rot;
       scene.add(built.mesh);
-      entry.mesh = built.mesh;
-      entry.mixer = built.mixer;
-      entry.walkAction = built.walkAction;
-      entry.heldGun = built.heldGun;
-      entry.isFallback = built.isFallback;
-      console.log("[player rig] upgraded", id, "from fallback capsule to real rig.");
+      Object.assign(entry, {
+        mesh: built.mesh, mixer: built.mixer, walkAction: built.walkAction,
+        heldGun: built.heldGun, isFallback: built.isFallback,
+      });
     }
 
     entry.mesh.position.lerp(entry.targetPos, Math.min(1, delta * 10));
     entry.mesh.rotation.y += (entry.targetRotY - entry.mesh.rotation.y) * Math.min(1, delta * 10);
 
     if (entry.walkAction) {
-      const movedDist = entry.mesh.position.distanceTo(entry.lastPos);
-      entry.walkAction.paused = movedDist < 0.005; // idle if barely moving
+      const moved = entry.mesh.position.distanceTo(entry.lastPos);
+      entry.walkAction.paused = moved < 0.005;
       entry.lastPos.copy(entry.mesh.position);
     }
     if (entry.mixer) entry.mixer.update(delta);
 
-    // if the pistol template finished loading after this player already
-    // joined, attach their gun now instead of leaving them empty-handed
     if (!entry.heldGun && heldPistolTemplate) {
-      const rig = entry.mesh.children[0]; // the cloned player.glb root
+      const rig = entry.mesh.children[0];
       if (rig) entry.heldGun = attachHeldGun(rig);
     }
-    if (entry.heldGun) applyHeldGunPose(entry.heldGun); // live-updates with the debug tool
+    if (entry.heldGun) applyHeldGunPose(entry.heldGun);
   }
 
-  if (gunMixer) gunMixer.update(delta);
+  for (const vm of Object.values(viewModels)) if (vm.mixer) vm.mixer.update(delta);
 
-  if (!mpJoined || !player.alive) return;
+  if (!playerRef || !player.alive) return;
   lastNetUpdate += delta;
   if (lastNetUpdate >= NET_UPDATE_INTERVAL) {
     lastNetUpdate = 0;
@@ -659,431 +1745,32 @@ function updateMultiplayer(delta) {
 }
 
 /* ============================================================
-   INCOMING HITS — this client is authoritative over its OWN health.
-   Other players report hits here; we apply the damage ourselves and
-   credit the kill back to them if it's fatal. This avoids two clients
-   racing to write the same health value.
-   ============================================================ */
-onChildAdded(myIncomingHitsRef, (snapshot) => {
-  const hit = snapshot.val();
-  if (!hit || !player.alive) { remove(snapshot.ref); return; }
-
-  const shooterState = latestPlayerStates.get(hit.shooterId);
-  const shooterName = shooterState?.name || hit.shooterName || "Someone";
-
-  damagePlayer(hit.damage || 25, shooterName, hit.shooterId);
-  remove(snapshot.ref); // mark processed
-});
-
-/* ============================================================
-   KILL FEED
-   ============================================================ */
-const killFeedEl = document.getElementById("killFeed");
-onChildAdded(killfeedQuery, (snapshot) => {
-  const entry = snapshot.val();
-  if (!entry) return;
-  addKillFeedEntry(entry.fraggerName, entry.fraggedName);
-});
-
-function addKillFeedEntry(fraggerName, fraggedName) {
-  const el = document.createElement("div");
-  el.className = "killFeedEntry";
-  el.innerHTML = `<span class="fragger">${escapeHtml(fraggerName)}</span> eliminated <span class="fragged">${escapeHtml(fraggedName)}</span>`;
-  killFeedEl.appendChild(el);
-  requestAnimationFrame(() => el.classList.add("show"));
-  setTimeout(() => {
-    el.classList.remove("show");
-    setTimeout(() => el.remove(), 300);
-  }, 4000);
-}
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
-}
-
-/* ============================================================
-   SCOREBOARD (Tab to toggle)
-   ============================================================ */
-const scoreboardEl = document.getElementById("scoreboard");
-const scoreboardBody = document.getElementById("scoreboardBody");
-let scoreboardVisible = false;
-
-function updateScoreboardUI() {
-  const rows = [{ id: playerId, name: myName, kills: player.kills, deaths: player.deaths }];
-  for (const [id, entry] of otherPlayers.entries()) {
-    rows.push({ id, name: entry.name, kills: entry.kills, deaths: entry.deaths });
-  }
-  rows.sort((a, b) => b.kills - a.kills);
-  scoreboardBody.innerHTML = rows.map(r =>
-    `<tr class="${r.id === playerId ? "me" : ""}"><td>${escapeHtml(r.name)}</td><td class="num">${r.kills}</td><td class="num">${r.deaths}</td></tr>`
-  ).join("");
-}
-
-/* ============================================================
-   INPUT
-   ============================================================ */
-const overlay = document.getElementById("overlay");
-const nameInput = document.getElementById("nameInput");
-const startBtn = document.getElementById("startBtn");
-nameInput.value = myName;
-
-startBtn.addEventListener("click", () => {
-  const typed = nameInput.value.trim();
-  if (typed) myName = typed.slice(0, 16);
-  if (!controls.isLocked) controls.lock();
-});
-nameInput.addEventListener("keydown", (e) => {
-  if (e.code === "Enter") startBtn.click();
-});
-
-controls.addEventListener("lock", () => {
-  overlay.classList.add("hidden");
-  if (!mpJoined) joinMultiplayer();
-  else update(playerRef, { name: myName });
-});
-controls.addEventListener("unlock", () => {
-  if (player.alive) overlay.classList.remove("hidden");
-});
-
-document.addEventListener("keydown", (e) => {
-  switch (e.code) {
-    case "KeyW": move.forward = true; break;
-    case "KeyS": move.back = true; break;
-    case "KeyA": move.left = true; break;
-    case "KeyD": move.right = true; break;
-    case "Space":
-      if (canJump && player.onGround) {
-        player.velocity.y = JUMP_SPEED;
-        player.onGround = false;
-        canJump = false;
-      }
-      break;
-    case "KeyR": startReload(); break;
-    case "Tab":
-      e.preventDefault();
-      scoreboardVisible = true;
-      scoreboardEl.classList.add("show");
-      break;
-  }
-});
-document.addEventListener("keyup", (e) => {
-  switch (e.code) {
-    case "KeyW": move.forward = false; break;
-    case "KeyS": move.back = false; break;
-    case "KeyA": move.left = false; break;
-    case "KeyD": move.right = false; break;
-    case "Space": canJump = true; break;
-    case "Tab":
-      scoreboardVisible = false;
-      scoreboardEl.classList.remove("show");
-      break;
-  }
-});
-
-document.addEventListener("mousedown", (e) => {
-  if (e.button === 0 && controls.isLocked) shoot();
-  if (e.button === 2 && controls.isLocked) isAiming = true;
-});
-document.addEventListener("mouseup", (e) => {
-  if (e.button === 2) isAiming = false;
-});
-// stop the browser's right-click menu from popping up while playing
-renderer.domElement.addEventListener("contextmenu", (e) => e.preventDefault());
-
-/* ============================================================
-   AIM DOWN SIGHTS (hold right click)
-   Blends the gun toward a centered "aim" pose, zooms the camera FOV
-   in, and slows movement — then eases all three back on release.
-   The aim pose starts as a guess relative to your tuned hip-fire
-   position; use the debug tool's "aim" mode (press \\ to switch which
-   pose it's editing) to dial it in the same way you did the hip pose.
-   ============================================================ */
-let isAiming = false;
-let aimBlend = 0; // 0 = hip, 1 = fully aimed
-const ADS_BLEND_SPEED = 9;
-const HIP_FOV = 75;
-const AIM_FOV = 52;
-const AIM_SPEED_MULTIPLIER = 0.55;
-
-const gunHipPose = { position: new THREE.Vector3(0.4, -1.38, -0.1), rotX: 0, rotY: -0.008, scale: 1 };
-const gunAimPose = { position: new THREE.Vector3(0, -1.34, 0.05), rotX: 0, rotY: 0, scale: 1 };
-
-/* ============================================================
-   GUN RECOIL KICK (aim-fire only)
-   Unlike the baked "shoot" clip (which we skip while aiming — see
-   shoot()), this is a small procedural kick applied to the gun's
-   own transform: it pushes straight back and tilts the muzzle up
-   for an instant, then eases back to whatever hip/aim pose it's
-   already blended to. The camera never moves.
-   Applied AFTER updateAimDownSights() sets the base pose each
-   frame, as a simple additive offset — so it naturally rides on
-   top of the hip/aim blend without fighting it.
-   ============================================================ */
-let gunKickZ = 0;    // current backward push (added to gunGroup.position.z)
-let gunKickRotX = 0; // current muzzle-up tilt (added to gunGroup.rotation.x)
-const GUN_KICK_PUSH = 0.02;   // world units — subtle
-const GUN_KICK_TILT = 0.05;   // radians — subtle
-const GUN_KICK_RETURN_SPEED = 10; // higher = snaps back faster
-
-function applyGunRecoilKick() {
-  gunKickZ += GUN_KICK_PUSH;
-  gunKickRotX += GUN_KICK_TILT;
-}
-function updateGunRecoilKick(delta) {
-  gunKickZ -= gunKickZ * Math.min(1, GUN_KICK_RETURN_SPEED * delta);
-  gunKickRotX -= gunKickRotX * Math.min(1, GUN_KICK_RETURN_SPEED * delta);
-  gunGroup.position.z += gunKickZ;
-  gunGroup.rotation.x += gunKickRotX;
-}
-
-function updateAimDownSights(delta) {
-  const target = isAiming ? 1 : 0;
-  aimBlend += (target - aimBlend) * Math.min(1, ADS_BLEND_SPEED * delta);
-
-  gunGroup.position.lerpVectors(gunHipPose.position, gunAimPose.position, aimBlend);
-  gunGroup.rotation.set(
-    gunHipPose.rotX + (gunAimPose.rotX - gunHipPose.rotX) * aimBlend,
-    gunHipPose.rotY + (gunAimPose.rotY - gunHipPose.rotY) * aimBlend,
-    0
-  );
-  const s = gunHipPose.scale + (gunAimPose.scale - gunHipPose.scale) * aimBlend;
-  gunGroup.scale.setScalar(s);
-
-  const fov = HIP_FOV + (AIM_FOV - HIP_FOV) * aimBlend;
-  if (Math.abs(camera.fov - fov) > 0.01) {
-    camera.fov = fov;
-    camera.updateProjectionMatrix();
-  }
-
-  updateGunRecoilKick(delta); // applied after the base pose is set above
-}
-
-function currentMoveSpeed() {
-  return WALK_SPEED * (1 - aimBlend * (1 - AIM_SPEED_MULTIPLIER));
-}
-
-/* ============================================================
-   AUDIO (simple synthesized SFX, no external files needed)
-   ============================================================ */
-let audioCtx = null;
-function ensureAudio() {
-  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-}
-function playTone(freq, duration, type, volume) {
-  ensureAudio();
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = type;
-  osc.frequency.value = freq;
-  gain.gain.value = volume;
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start();
-  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
-  osc.stop(audioCtx.currentTime + duration);
-}
-function sfxShoot() { playTone(180, 0.08, "square", 0.15); }
-function sfxEmpty() { playTone(90, 0.1, "square", 0.1); }
-function sfxHit() { playTone(600, 0.06, "triangle", 0.12); }
-function sfxKill() { playTone(300, 0.2, "sawtooth", 0.15); }
-function sfxHurt() { playTone(120, 0.15, "sawtooth", 0.15); }
-function sfxReload() { playTone(400, 0.12, "sine", 0.1); }
-
-/* ============================================================
-   WEAPON
-   ============================================================ */
-const weapon = { mag: 12, magSize: 12, reloading: false, fireCooldown: 0, fireRate: 0.18 };
-const raycaster = new THREE.Raycaster();
-const hitmarkerEl = document.getElementById("hitmarker");
-const ammoText = document.getElementById("ammoText");
-const reloadText = document.getElementById("reloadText");
-
-function updateAmmoUI() {
-  ammoText.textContent = `${weapon.mag} / ${weapon.magSize}`;
-}
-
-function startReload() {
-  if (weapon.reloading || weapon.mag === weapon.magSize || !player.alive) return;
-  weapon.reloading = true;
-  reloadText.style.visibility = "visible";
-  sfxReload();
-  setTimeout(() => {
-    weapon.mag = weapon.magSize;
-    weapon.reloading = false;
-    reloadText.style.visibility = "hidden";
-    updateAmmoUI();
-  }, 1100);
-}
-
-const WEAPON_DAMAGE = 25; // 4 hits to kill at full health
-
-function shoot() {
-  if (weapon.fireCooldown > 0 || weapon.reloading || !player.alive) return;
-  if (weapon.mag <= 0) { sfxEmpty(); startReload(); return; }
-
-  weapon.mag--;
-  weapon.fireCooldown = weapon.fireRate;
-  updateAmmoUI();
-  sfxShoot();
-
-  muzzleLight.intensity = 3.5;
-  setTimeout(() => { muzzleLight.intensity = 0; }, 60);
-
-  if (shootAction && !isAiming) { shootAction.reset(); shootAction.play(); }
-  if (isAiming) applyGunRecoilKick();
-
-  raycaster.setFromCamera(new THREE.Vector2(0, 0), camera);
-  const targetGroups = Array.from(otherPlayers.values()).map(e => e.mesh);
-  const hits = raycaster.intersectObjects(targetGroups, true); // recursive: rig has nested body-part meshes
-
-  if (hits.length > 0) {
-    // walk up from whatever body part was hit to the tagged root group
-    let obj = hits[0].object;
-    while (obj && obj.userData.playerId === undefined) obj = obj.parent;
-    const targetId = obj ? obj.userData.playerId : null;
-    if (targetId) {
-      // Report the hit; the target's own client applies the damage.
-      push(ref(db, `rooms/${ROOM_ID}/players/${targetId}/incomingHits`), {
-        damage: WEAPON_DAMAGE, shooterId: playerId, shooterName: myName, ts: serverTimestamp(),
-      });
-      sfxHit();
-      hitmarkerEl.classList.remove("show");
-      void hitmarkerEl.offsetWidth; // restart animation
-      hitmarkerEl.classList.add("show");
-    }
-  }
-}
-
-/* ============================================================
-   HEALTH / DEATH / RESPAWN (local player is authoritative over
-   its own health — see the incomingHits listener above)
-   ============================================================ */
-let killsCount = 0; // mirrors player.kills, kept for clarity in UI updates
-const killsValEl = document.getElementById("killsVal");
-const deathsValEl = document.getElementById("deathsVal");
-const healthFill = document.getElementById("healthFill");
-const damageFlash = document.getElementById("damageFlash");
-
-function updateHealthUI() {
-  const pct = Math.max(0, player.health / player.maxHealth) * 100;
-  healthFill.style.width = `${pct}%`;
-}
-function updateKdUI() {
-  killsValEl.textContent = player.kills;
-  deathsValEl.textContent = `${player.deaths} death${player.deaths === 1 ? "" : "s"}`;
-}
-
-function damagePlayer(amount, shooterName, shooterId) {
-  if (!player.alive) return;
-  player.health -= amount;
-  sfxHurt();
-  damageFlash.classList.remove("show");
-  void damageFlash.offsetWidth;
-  damageFlash.classList.add("show");
-  setTimeout(() => damageFlash.classList.remove("show"), 150);
-  updateHealthUI();
-
-  if (player.health <= 0) {
-    playerDie(shooterName, shooterId);
-  } else {
-    update(playerRef, { health: player.health });
-  }
-}
-
-function playerDie(killerName, killerId) {
-  player.alive = false;
-  player.health = 0;
-  player.deaths++;
-  updateHealthUI();
-  updateKdUI();
-
-  // credit the kill to whoever got the finishing hit
-  if (killerId) {
-    update(ref(db, `rooms/${ROOM_ID}/players/${killerId}`), { kills: increment(1) });
-  }
-  update(playerRef, { health: 0, deaths: player.deaths });
-  push(ref(db, `rooms/${ROOM_ID}/killfeed`), {
-    fraggerName: killerName || "Someone", fraggedName: myName, ts: serverTimestamp(),
-  });
-
-  controls.unlock();
-  const h1 = overlay.querySelector("h1");
-  h1.textContent = `ELIMINATED by ${killerName || "someone"}`;
-  startBtn.textContent = "RESPAWN";
-  overlay.classList.remove("hidden");
-}
-
-function respawnPlayer() {
-  player.alive = true;
-  player.health = player.maxHealth;
-  updateHealthUI();
-  camera.position.copy(randomSpawnPoint()).setY(PLAYER_HEIGHT);
-  player.velocity.set(0, 0, 0);
-  weapon.mag = weapon.magSize;
-  updateAmmoUI();
-  update(playerRef, {
-    x: camera.position.x, y: camera.position.y, z: camera.position.z,
-    health: player.health, name: myName,
-  });
-  overlay.querySelector("h1").textContent = "ARENA PVP";
-  startBtn.textContent = "START";
-}
-
-controls.addEventListener("lock", () => {
-  if (!player.alive) respawnPlayer();
-});
-
-/* ============================================================
-   COLLISION HELPERS (simple circle-vs-AABB in XZ plane)
-   ============================================================ */
-function resolveObstacleCollision(pos, radius) {
-  for (const ob of obstacles) {
-    const dx = pos.x - ob.x;
-    const dz = pos.z - ob.z;
-    const overlapX = ob.halfW + radius - Math.abs(dx);
-    const overlapZ = ob.halfD + radius - Math.abs(dz);
-    if (overlapX > 0 && overlapZ > 0) {
-      if (overlapX < overlapZ) {
-        pos.x += Math.sign(dx) * overlapX;
-      } else {
-        pos.z += Math.sign(dz) * overlapZ;
-      }
-    }
-  }
-  const half = ARENA_SIZE / 2 - 1;
-  pos.x = Math.max(-half, Math.min(half, pos.x));
-  pos.z = Math.max(-half, Math.min(half, pos.z));
-}
-
-/* ============================================================
    MAIN LOOP
    ============================================================ */
 const clock = new THREE.Clock();
+let killPollTimer = 0;
 
 function animate() {
   requestAnimationFrame(animate);
   const delta = Math.min(clock.getDelta(), 0.1);
 
   if (controls.isLocked && player.alive) {
-    const dir = new THREE.Vector3();
     const forwardInput = (move.forward ? 1 : 0) - (move.back ? 1 : 0);
     const rightInput = (move.right ? 1 : 0) - (move.left ? 1 : 0);
-
-    dir.set(rightInput, 0, -forwardInput);
+    const dir = new THREE.Vector3(rightInput, 0, -forwardInput);
     if (dir.lengthSq() > 0) dir.normalize();
 
     const forwardVec = new THREE.Vector3();
     camera.getWorldDirection(forwardVec);
-    forwardVec.y = 0;
-    forwardVec.normalize();
+    forwardVec.y = 0; forwardVec.normalize();
     const rightVec = new THREE.Vector3().crossVectors(forwardVec, camera.up).normalize();
 
     const moveVec = new THREE.Vector3();
-    moveVec.addScaledVector(forwardVec, -dir.z);
-    moveVec.addScaledVector(rightVec, dir.x);
+    moveVec.addScaledVector(forwardVec, -dir.z).addScaledVector(rightVec, dir.x);
     if (moveVec.lengthSq() > 0) moveVec.normalize();
 
-    const newPos = camera.position.clone();
     const speed = currentMoveSpeed();
+    const newPos = camera.position.clone();
     newPos.x += moveVec.x * speed * delta;
     newPos.z += moveVec.z * speed * delta;
     resolveObstacleCollision(newPos, PLAYER_RADIUS);
@@ -1097,18 +1784,48 @@ function animate() {
       player.velocity.y = 0;
       player.onGround = true;
     }
-
-    if (weapon.fireCooldown > 0) weapon.fireCooldown -= delta;
   }
 
+  // weapon timers
+  if (fireCooldown > 0) fireCooldown -= delta;
+  const ammo = activeAmmo();
+  if (ammo && ammo.reloading) {
+    ammo.reloadTimer -= delta;
+    if (ammo.reloadTimer <= 0) finishReload();
+  }
+  // burst continuation
+  if (burstQueue > 0) {
+    burstTimer -= delta;
+    if (burstTimer <= 0) {
+      fireOneShot();
+      burstQueue--;
+      burstTimer = activeWeapon().burstDelay || 0.07;
+    }
+  }
+  // full-auto
+  if (triggerHeld && canFire()) {
+    const def = activeWeapon();
+    if (def.auto && fireCooldown <= 0 && burstQueue <= 0) tryFire();
+  }
+
+  // respawn countdown
+  if (!player.alive && gameState === "match") {
+    respawnTimer -= delta;
+    if (respawnTimer <= 0) respawnPlayer();
+  }
+
+  // poll own kill count (kills are written by whoever we killed)
+  killPollTimer += delta;
+  if (killPollTimer > 0.4) { killPollTimer = 0; pollMyKills(); }
+
+  updateGrenades(delta);
   updateAimDownSights(delta);
   updateMultiplayer(delta);
   renderer.render(scene, camera);
 }
 
-updateHealthUI();
-updateAmmoUI();
-updateKdUI();
+resetAllAmmo();
+updateAllUI();
 animate();
 </script>
 </body>
