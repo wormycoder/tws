@@ -240,6 +240,7 @@
 <div id="lobbyHint" class="hidden">
   <h2>LOBBY</h2>
   <p>Walk around freely — no shooting here. Press PLAY to pick a mode.</p>
+  <p style="opacity:0.6;margin-top:2px;">Press <span class="key" style="background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.35);border-radius:4px;padding:1px 7px;font-family:monospace;">ESC</span> to free your cursor</p>
 </div>
 
 <div id="lobbyBar" class="hidden">
@@ -330,8 +331,8 @@ const GAME_MODES = {
   "3v3":  { label: "3v3",  desc: "Three a side. First to 40.",      teamSize: 3, teams: 2, scoreLimit: 40, teamBased: true },
   "4v4":  { label: "4v4",  desc: "Four a side. First to 50.",       teamSize: 4, teams: 2, scoreLimit: 50, teamBased: true },
   "5v5":  { label: "5v5",  desc: "Full squads. First to 60.",       teamSize: 5, teams: 2, scoreLimit: 60, teamBased: true },
-  "ffa":  { label: "FFA",  desc: "Everyone for themselves. 25 kills.", teamSize: 1, teams: 6, scoreLimit: 25, teamBased: false },
-  "tdm":  { label: "TDM",  desc: "Team deathmatch. First to 50.",   teamSize: 4, teams: 2, scoreLimit: 50, teamBased: true },
+  "ffa":  { label: "FFA",  desc: "Everyone for themselves. Drop in anytime.", teamSize: 1, teams: 6, scoreLimit: 25, teamBased: false, instant: true },
+  "tdm":  { label: "TDM",  desc: "Team deathmatch. Drop in anytime.", teamSize: 4, teams: 2, scoreLimit: 50, teamBased: true, instant: true },
 };
 
 /* ============================================================
@@ -947,22 +948,50 @@ function joinRoom(roomId) {
    the queue is full claims the match via a transaction (so two
    clients can't both create one), writes the roster, and everyone
    in it moves to the match room.
+
+   FFA and TDM skip this entirely — they're persistent, always-open
+   rooms (`arena_ffa` / `arena_tdm`) that you drop straight into,
+   since team-size parity doesn't matter for them the way it does
+   for the Nv N modes.
    ============================================================ */
 let queuedMode = null;
 let queueRef = null, unsubQueue = null, unsubMyQueueEntry = null;
+let queueTimeoutHint = null;
+
+// Clears any of MY OWN leftover queue entries from a previous session
+// (e.g. a tab that closed without onDisconnect firing cleanly). Stale
+// entries would otherwise sit in the queue and can confuse the "lowest
+// id claims the match" logic below.
+async function clearStaleQueueEntries() {
+  for (const modeKey of Object.keys(GAME_MODES)) {
+    try { await remove(ref(db, `queues/${modeKey}/${playerId}`)); } catch (e) {}
+  }
+}
 
 async function enterQueue(modeKey) {
   const mode = GAME_MODES[modeKey];
-  if (!mode) return;
+  if (!mode || mode.instant) return;
   queuedMode = modeKey;
   gameState = "queued";
   queueRef = ref(db, `queues/${modeKey}/${playerId}`);
   onDisconnect(queueRef).remove();
-  await set(queueRef, { name: myName, ts: serverTimestamp() });
+
+  try {
+    await set(queueRef, { name: myName, ts: serverTimestamp() });
+  } catch (err) {
+    console.error("[queue] failed to write queue entry:", err);
+    setQueueStatus(`Couldn't join queue: ${err.code || err.message}. Check your Firebase database rules (see README).`);
+    return;
+  }
 
   setQueueStatus(`Queued for ${mode.label} — waiting for players...`);
+  if (queueTimeoutHint) clearTimeout(queueTimeoutHint);
+  queueTimeoutHint = setTimeout(() => {
+    if (gameState === "queued") {
+      setQueueStatus(`Still waiting on ${mode.label}... make sure your friend queued for the same mode, or try Back then Queue again.`);
+    }
+  }, 9000);
 
-  // watch my own queue entry: when a match claims me, it writes matchId here
   unsubMyQueueEntry = onValue(queueRef, (snap) => {
     const v = snap.val();
     if (v && v.matchId) {
@@ -972,47 +1001,52 @@ async function enterQueue(modeKey) {
     }
   });
 
-  // watch the whole queue to see if we can form a match
   unsubQueue = onValue(ref(db, `queues/${modeKey}`), async (snap) => {
     const entries = snap.val() || {};
     const ids = Object.keys(entries).filter(id => !entries[id].matchId);
-    const needed = mode.teamBased ? mode.teamSize * 2 : Math.min(mode.teams, 4);
+    const needed = mode.teamSize * 2;
     setQueueStatus(`Queued for ${mode.label} — ${ids.length}/${needed} players...`);
     if (ids.length < needed) return;
 
-    // only the lowest-sorted id attempts to form the match, to reduce contention
     ids.sort();
     if (ids[0] !== playerId) return;
 
-    const roster = ids.slice(0, needed);
     const matchId = "m_" + Math.random().toString(36).slice(2, 10);
     const claimRef = ref(db, `queues/${modeKey}`);
-    const result = await runTransaction(claimRef, (current) => {
-      if (!current) return current;
-      const free = Object.keys(current).filter(id => !current[id].matchId);
-      if (free.length < needed) return; // abort
-      free.sort();
-      const chosen = free.slice(0, needed);
-      chosen.forEach((id, i) => {
-        current[id] = {
-          ...current[id],
-          matchId,
-          team: mode.teamBased ? (i % 2 === 0 ? "A" : "B") : null,
-        };
+    let result;
+    try {
+      result = await runTransaction(claimRef, (current) => {
+        if (!current) return current;
+        const free = Object.keys(current).filter(id => !current[id].matchId);
+        if (free.length < needed) return; // abort — someone left since we checked
+        free.sort();
+        const chosen = free.slice(0, needed);
+        chosen.forEach((id, i) => {
+          current[id] = { ...current[id], matchId, team: i % 2 === 0 ? "A" : "B" };
+        });
+        return current;
       });
-      return current;
-    });
+    } catch (err) {
+      console.error("[queue] transaction failed:", err);
+      setQueueStatus(`Match creation failed: ${err.code || err.message}. Check Firebase rules.`);
+      return;
+    }
 
     if (result.committed) {
-      await set(ref(db, `matches/${matchId}`), {
-        mode: modeKey, scoreLimit: mode.scoreLimit, teamBased: mode.teamBased,
-        scoreA: 0, scoreB: 0, status: "active", createdAt: serverTimestamp(),
-      });
+      try {
+        await set(ref(db, `matches/${matchId}`), {
+          mode: modeKey, scoreLimit: mode.scoreLimit, teamBased: mode.teamBased,
+          scoreA: 0, scoreB: 0, status: "active", createdAt: serverTimestamp(),
+        });
+      } catch (err) {
+        console.error("[queue] failed to create match doc:", err);
+      }
     }
   });
 }
 
 function cleanupQueue() {
+  if (queueTimeoutHint) { clearTimeout(queueTimeoutHint); queueTimeoutHint = null; }
   if (unsubQueue) { unsubQueue(); unsubQueue = null; }
   if (unsubMyQueueEntry) { unsubMyQueueEntry(); unsubMyQueueEntry = null; }
   if (queueRef) { remove(queueRef).catch(()=>{}); queueRef = null; }
@@ -1025,7 +1059,62 @@ async function cancelQueue() {
   setQueueStatus("");
 }
 
-async function startMatch(matchId, modeKey, team) {
+/* --- Instant-join modes (FFA / TDM): fixed persistent room, no queue --- */
+async function joinInstantMode(modeKey) {
+  const mode = GAME_MODES[modeKey];
+  if (!mode || !mode.instant) return;
+  const roomId = `arena_${modeKey}`;
+
+  setQueueStatus(`Joining ${mode.label}...`);
+  try {
+    // create the shared match doc if it doesn't exist yet or isn't active
+    await runTransaction(ref(db, `matches/${modeKey}`), (current) => {
+      if (current && current.status === "active") return current; // already running, leave it
+      return {
+        mode: modeKey, scoreLimit: mode.scoreLimit, teamBased: mode.teamBased,
+        scoreA: 0, scoreB: 0, status: "active", createdAt: Date.now(),
+      };
+    });
+  } catch (err) {
+    console.error("[instant join] failed to init match doc:", err);
+    setQueueStatus(`Couldn't join: ${err.code || err.message}. Check Firebase rules.`);
+    return;
+  }
+
+  let team = null;
+  if (mode.teamBased) {
+    try {
+      const snap = await get(ref(db, `rooms/${roomId}/players`));
+      const players = snap.val() || {};
+      let countA = 0, countB = 0;
+      for (const p of Object.values(players)) { if (p.team === "A") countA++; else if (p.team === "B") countB++; }
+      team = countA <= countB ? "A" : "B";
+    } catch (err) {
+      team = Math.random() < 0.5 ? "A" : "B"; // fallback if we can't read the roster
+    }
+  }
+
+  await startMatch(modeKey, modeKey, team, roomId);
+}
+
+// When an instant-mode match ends, reset it back to active after a short
+// pause so the room keeps running for whoever's still in it. Guarded by
+// a transaction so only one client performs the reset.
+async function resetInstantMatchIfEnded(modeKey) {
+  const mode = GAME_MODES[modeKey];
+  if (!mode || !mode.instant) return;
+  try {
+    await runTransaction(ref(db, `matches/${modeKey}`), (current) => {
+      if (!current || current.status !== "ended") return current;
+      return {
+        mode: modeKey, scoreLimit: mode.scoreLimit, teamBased: mode.teamBased,
+        scoreA: 0, scoreB: 0, status: "active", createdAt: Date.now(),
+      };
+    });
+  } catch (err) { console.error("[instant mode] reset failed:", err); }
+}
+
+async function startMatch(matchId, modeKey, team, roomIdOverride) {
   await leaveCurrentRoom();
   currentMatchId = matchId;
   myTeam = team;
@@ -1042,16 +1131,27 @@ async function startMatch(matchId, modeKey, team) {
   camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
   player.velocity.set(0,0,0);
 
-  joinRoom(`match_${matchId}`);
+  joinRoom(roomIdOverride || `match_${matchId}`);
 
   // watch match score/status
   if (unsubMatch) unsubMatch();
+  let sawEnded = false;
   unsubMatch = onValue(ref(db, `matches/${matchId}`), (snap) => {
     const m = snap.val();
     if (!m) return;
     currentMatchData = m;
     updateTeamScoresUI();
-    if (m.status === "ended") showMatchResult(m);
+    if (m.status === "ended" && !sawEnded) {
+      sawEnded = true;
+      showMatchResult(m);
+      if (mode.instant) setTimeout(() => resetInstantMatchIfEnded(modeKey), 4000);
+    } else if (m.status === "active" && sawEnded) {
+      // instant-mode room reset while we were still in it — jump back in
+      sawEnded = false;
+      matchResultEl.classList.add("hidden");
+      player.kills = 0; player.deaths = 0;
+      respawnPlayer();
+    }
   });
 
   document.getElementById("modeName").textContent = mode.label;
@@ -1163,13 +1263,14 @@ for (const [key, mode] of Object.entries(GAME_MODES)) {
   const card = document.createElement("div");
   card.className = "modeCard";
   card.dataset.mode = key;
-  const needed = mode.teamBased ? mode.teamSize * 2 : Math.min(mode.teams, 4);
-  card.innerHTML = `<div class="mTitle">${mode.label}</div><div class="mDesc">${mode.desc}</div><div class="mCount">${needed} players</div>`;
+  const countLabel = mode.instant ? "drop in anytime" : `${mode.teamSize * 2} players`;
+  card.innerHTML = `<div class="mTitle">${mode.label}</div><div class="mDesc">${mode.desc}</div><div class="mCount">${countLabel}</div>`;
   card.addEventListener("click", () => {
     selectedMode = key;
     document.querySelectorAll(".modeCard").forEach(c => c.classList.remove("selected"));
     card.classList.add("selected");
     confirmModeBtn.disabled = false;
+    confirmModeBtn.textContent = mode.instant ? "JOIN" : "QUEUE UP";
   });
   modeGridEl.appendChild(card);
 }
@@ -1185,6 +1286,8 @@ cancelModeBtn.addEventListener("click", () => {
 });
 confirmModeBtn.addEventListener("click", () => {
   if (!selectedMode) return;
+  const mode = GAME_MODES[selectedMode];
+  if (mode.instant) { joinInstantMode(selectedMode); return; }
   if (gameState === "queued") { cancelQueue(); confirmModeBtn.textContent = "QUEUE UP"; return; }
   enterQueue(selectedMode);
   confirmModeBtn.textContent = "CANCEL QUEUE";
@@ -1197,6 +1300,7 @@ startBtn.addEventListener("click", () => {
   overlayEl.classList.add("hidden");
   lobbyBarEl.classList.remove("hidden");
   lobbyHintEl.classList.remove("hidden");
+  clearStaleQueueEntries();
   if (!playerRef) joinRoom("lobby");
   controls.lock();
 });
