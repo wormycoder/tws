@@ -534,6 +534,17 @@ camera.position.copy(pickSpawn()).setY(PLAYER_HEIGHT);
 
 const controls = new PointerLockControls(camera, renderer.domElement);
 
+// camera.rotation.y uses THREE's default XYZ Euler order, which does NOT
+// match the YXZ order PointerLockControls uses internally to build the
+// look direction. They only agree when pitch is exactly zero — any time
+// you're looking up/down, camera.rotation.y reports the wrong heading.
+// This extracts the true horizontal yaw the same way the controls do.
+const _yawEuler = new THREE.Euler(0, 0, 0, "YXZ");
+function getYaw() {
+  _yawEuler.setFromQuaternion(camera.quaternion, "YXZ");
+  return _yawEuler.y;
+}
+
 const player = {
   velocity: new THREE.Vector3(),
   onGround: true,
@@ -861,7 +872,7 @@ function joinRoom(roomId) {
   onDisconnect(playerRef).remove();
   set(playerRef, {
     x: camera.position.x, y: camera.position.y, z: camera.position.z,
-    rotY: camera.rotation.y, health: player.health,
+    rotY: getYaw(), health: player.health,
     name: myName, kills: player.kills, deaths: player.deaths,
     team: myTeam, weapon: loadout[activeSlot],
     joinedAt: serverTimestamp(),
@@ -1739,7 +1750,7 @@ function updateMultiplayer(delta) {
     lastNetUpdate = 0;
     update(playerRef, {
       x: camera.position.x, y: camera.position.y, z: camera.position.z,
-      rotY: camera.rotation.y, health: player.health,
+      rotY: getYaw(), health: player.health,
     });
   }
 }
